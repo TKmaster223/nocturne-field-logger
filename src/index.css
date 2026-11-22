@@ -1,0 +1,109 @@
+@import "tailwindcss";
+@custom-variant red-shift (&:where(.red-shift, .red-shift *));
+
+:root {
+  --bg-canvas: #07090e;
+  --bg-surface: #0f141f;
+  --bg-elevated: #161d2d;
+  --border-hairline: #1e293b;
+  --border-strong: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --accent-primary: #f59e0b;
+  --accent-primary-ink: #07090e;
+  --accent-secondary: #06b6d4;
+  --status-nominal: #10b981;
+  --status-warning: #f59e0b;
+  --status-critical: #f43f5e;
+  --chart-grid: #1e293b;
+}
+
+html.red-shift {
+  --bg-canvas: #040000;
+  --bg-surface: #100202;
+  --bg-elevated: #190404;
+  --border-hairline: #3b0808;
+  --border-strong: #5c1010;
+  --text-primary: #fca5a5;
+  --text-secondary: #f87171;
+  --text-muted: #b91c1c;
+  --accent-primary: #dc2626;
+  --accent-primary-ink: #040000;
+  --accent-secondary: #ef4444;
+  --status-nominal: #ef4444;
+  --status-warning: #dc2626;
+  --status-critical: #f87171;
+  --chart-grid: #2c0606;
+}
+
+@layer base {
+  html,
+  body {
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    font-family: "DM Sans", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: "Chakra Petch", system-ui, sans-serif;
+    letter-spacing: 0.01em;
+    text-wrap: balance;
+  }
+
+  .font-mono,
+  code,
+  pre {
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom subtle range input for precision telemetry sliders */
+input[type="range"].telemetry-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--border-strong);
+  border-radius: 2px;
+  outline: none;
+}
+
+input[type="range"].telemetry-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--accent-primary);
+  border: 2px solid var(--bg-canvas);
+  cursor: pointer;
+}
+
+input[type="range"].telemetry-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--accent-primary);
+  border: 2px solid var(--bg-canvas);
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

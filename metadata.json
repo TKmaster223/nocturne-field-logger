@@ -1,0 +1,6 @@
+{
+  "name": "Nocturne Field",
+  "description": "Astrophotography NPF exposure calculator, celestial event timers, Bortle sky monitor, and unedited Galaxy S24 Ultra RAW wildlife field logger for WhatsApp document export.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
