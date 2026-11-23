@@ -9,6 +9,7 @@ type EventFilter = 'all' | 'total' | 'asteroid';
 export const CelestialTimersView: React.FC = () => {
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
   const [filter, setFilter] = useState<EventFilter>('all');
+  const [flybyOffsetHours, setFlybyOffsetHours] = useState<number>(0);
 
   useEffect(() => {
     const interval = setInterval(() => setNowMs(Date.now()), 1000);
@@ -17,6 +18,19 @@ export const CelestialTimersView: React.FC = () => {
 
   const apophis = CELESTIAL_EVENTS_CATALOG[0];
   const apophisCountdown = formatCountdownParts(apophis.isoUtc, nowMs);
+
+  // Interactive Apophis flyby geometry around 21:46 UTC (perigee = 38,012 km, speed ~ 7.4 km/s)
+  const flybyState = useMemo(() => {
+    const perigeeKm = 38012;
+    const speedKmH = 7.4 * 3600; // ~26,640 km/h
+    const alongTrackKm = flybyOffsetHours * speedKmH;
+    const distanceKm = Math.round(Math.sqrt(perigeeKm * perigeeKm + alongTrackKm * alongTrackKm));
+    const lunarDistanceFrac = (distanceKm / 384400).toFixed(2);
+    // Map -12h..+12h to SVG path coordinates
+    const xPos = 220 + (flybyOffsetHours / 12) * 180;
+    const yPos = 68; // Closest approach skims just outside the GEO ring!
+    return { distanceKm, lunarDistanceFrac, xPos, yPos };
+  }, [flybyOffsetHours]);
 
   const filteredEvents = useMemo(() => {
     const rest = CELESTIAL_EVENTS_CATALOG.slice().sort(
@@ -57,7 +71,7 @@ export const CelestialTimersView: React.FC = () => {
   return (
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 py-5 sm:py-6 pb-24 md:pb-12 space-y-6">
       {/* Priority Hero Countdown: 99942 Apophis Flyby */}
-      <section className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-4 sm:p-6">
+      <section className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-4 sm:p-6 space-y-5">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6">
           <div className="space-y-2 max-w-2xl">
             <div className="text-xs font-mono text-[var(--accent-primary)]">
@@ -67,7 +81,7 @@ export const CelestialTimersView: React.FC = () => {
               {apophis.title}
             </h1>
             <p className="text-xs sm:text-sm text-[var(--text-secondary)] leading-relaxed">
-              {apophis.subtitle} Passing well inside Earth&apos;s geostationary ring (~35,786 km) at ~38,012 km geocentric distance.
+              {apophis.subtitle} Passing well inside the Moon&apos;s orbit and skimming near Earth&apos;s geostationary satellite ring (~35,786 km altitude).
             </p>
             <div className="pt-1 text-xs font-mono text-[var(--text-muted)] flex flex-wrap gap-x-3 gap-y-1">
               <span>{apophis.magnitudeOrDistance}</span>
@@ -98,7 +112,123 @@ export const CelestialTimersView: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-4 sm:mt-5 pt-4 border-t border-[var(--border-hairline)] flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--text-secondary)]">
+        {/* Interactive Scrubbable Apophis Orbital Encounter Diagram */}
+        <div className="border border-[var(--border-hairline)] bg-[var(--bg-canvas)] rounded-md p-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span className="font-display font-semibold text-[var(--text-primary)]">
+              Interactive Flyby Trajectory (Geocentric Scale)
+            </span>
+            <span className="font-mono text-[var(--accent-secondary)] tabular-nums">
+              {flybyOffsetHours === 0
+                ? 'Closest Approach (T+0.0h)'
+                : `${flybyOffsetHours > 0 ? '+' : ''}${flybyOffsetHours.toFixed(1)}h`}{' '}
+              · {flybyState.distanceKm.toLocaleString()} km ({flybyState.lunarDistanceFrac} LD)
+            </span>
+          </div>
+
+          <svg
+            viewBox="0 0 440 160"
+            className="w-full h-36 sm:h-40 select-none"
+            role="img"
+            aria-label="Interactive Apophis April 2029 flyby diagram relative to Earth and Geostationary orbit"
+          >
+            {/* GEO Satellite Ring */}
+            <circle
+              cx={220}
+              cy={110}
+              r={46}
+              fill="none"
+              stroke="var(--border-strong)"
+              strokeWidth={1}
+              strokeDasharray="4 4"
+            />
+            <text
+              x={272}
+              y={114}
+              fill="var(--text-muted)"
+              fontSize={9}
+              fontFamily="JetBrains Mono, monospace"
+            >
+              GEO Ring (35,786 km alt)
+            </text>
+
+            {/* Earth */}
+            <circle cx={220} cy={110} r={10} fill="var(--accent-secondary)" />
+            <text
+              x={220}
+              y={134}
+              textAnchor="middle"
+              fill="var(--text-secondary)"
+              fontSize={9}
+              fontFamily="JetBrains Mono, monospace"
+            >
+              Earth
+            </text>
+
+            {/* Apophis Hyperbolic Trajectory Line */}
+            <line
+              x1={30}
+              y1={68}
+              x2={410}
+              y2={68}
+              stroke="var(--accent-primary)"
+              strokeWidth={1.5}
+              strokeDasharray="3 3"
+              opacity={0.7}
+            />
+
+            {/* Perigee Marker */}
+            <line
+              x1={220}
+              y1={68}
+              x2={220}
+              y2={110}
+              stroke="var(--border-hairline)"
+              strokeWidth={1}
+            />
+
+            {/* Dynamic Apophis Position */}
+            <circle
+              cx={flybyState.xPos}
+              cy={flybyState.yPos}
+              r={6}
+              fill="var(--accent-primary)"
+              stroke="var(--bg-canvas)"
+              strokeWidth={2}
+            />
+            <text
+              x={flybyState.xPos}
+              y={54}
+              textAnchor="middle"
+              fill="var(--accent-primary)"
+              fontSize={10}
+              fontWeight={700}
+              fontFamily="JetBrains Mono, monospace"
+            >
+              99942 Apophis
+            </text>
+          </svg>
+
+          <div className="space-y-1">
+            <input
+              type="range"
+              aria-label="Scrub Apophis flyby timeline in hours"
+              min={-12}
+              max={12}
+              step={0.5}
+              value={flybyOffsetHours}
+              onChange={(e) => setFlybyOffsetHours(Number(e.target.value))}
+              className="w-full telemetry-slider"
+            />
+            <div className="flex justify-between text-[10px] font-mono text-[var(--text-muted)]">
+              <span>T - 12h</span>
+              <span>21:46 UTC Perigee</span>
+              <span>T + 12h</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-1 flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--text-secondary)]">
           <div className="flex items-start sm:items-center gap-2">
             <Sparkles className="w-4 h-4 text-[var(--accent-secondary)] shrink-0 mt-0.5 sm:mt-0" />
             <span>
@@ -150,7 +280,7 @@ export const CelestialTimersView: React.FC = () => {
             return (
               <article
                 key={ev.id}
-                className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-4 sm:p-5 flex flex-col justify-between gap-4"
+                className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-4 sm:p-5 flex flex-col justify-between gap-4 hover:border-[var(--border-strong)] transition-colors"
               >
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs font-mono text-[var(--text-muted)]">

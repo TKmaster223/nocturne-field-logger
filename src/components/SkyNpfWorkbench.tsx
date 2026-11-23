@@ -9,6 +9,7 @@ import {
   Wind,
   AlertTriangle,
   CheckCircle2,
+  Moon,
 } from 'lucide-react';
 import { S24_ULTRA_OPTICS } from '../data/s24Optics';
 import {
@@ -18,11 +19,13 @@ import {
   SkyConditions,
 } from '../types/field';
 import {
+  calculateEffectiveBortle,
   calculateLunarTelemetry,
   calculateNpfExposure,
   calculateTwilightSchedule,
   getBortleInfo,
 } from '../utils/astroMath';
+import { SkySimulatorCanvas } from './SkySimulatorCanvas';
 
 interface SkyNpfWorkbenchProps {
   selectedLensId: string;
@@ -64,6 +67,7 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
 }) => {
   const [declinationDeg, setDeclinationDeg] = useState<number>(15);
   const [toleranceK, setToleranceK] = useState<number>(1);
+  const [includeMoonGlow, setIncludeMoonGlow] = useState<boolean>(true);
   const [hoveredOpticId, setHoveredOpticId] = useState<string | null>(null);
   const [manualLatInput, setManualLatInput] = useState<string>(gps.lat.toFixed(4));
   const [manualLngInput, setManualLngInput] = useState<string>(gps.lng.toFixed(4));
@@ -73,13 +77,24 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
     [selectedLensId]
   );
 
-  const npfResult = useMemo(
-    () => calculateNpfExposure(activeLens, declinationDeg, toleranceK, bortleClass),
-    [activeLens, declinationDeg, toleranceK, bortleClass]
+  const lunar = useMemo(() => calculateLunarTelemetry(new Date()), []);
+  const effectiveSky = useMemo(
+    () => calculateEffectiveBortle(bortleClass, lunar.illuminationPct, includeMoonGlow),
+    [bortleClass, lunar.illuminationPct, includeMoonGlow]
   );
 
-  const bortleInfo = useMemo(() => getBortleInfo(bortleClass), [bortleClass]);
-  const lunar = useMemo(() => calculateLunarTelemetry(new Date()), []);
+  const npfResult = useMemo(
+    () =>
+      calculateNpfExposure(
+        activeLens,
+        declinationDeg,
+        toleranceK,
+        Math.round(effectiveSky.effectiveBortle)
+      ),
+    [activeLens, declinationDeg, toleranceK, effectiveSky.effectiveBortle]
+  );
+
+  const bortleInfo = useMemo(() => getBortleInfo(effectiveSky.effectiveBortle), [effectiveSky.effectiveBortle]);
   const twilight = useMemo(
     () => calculateTwilightSchedule(gps.lat, gps.lng, new Date()),
     [gps.lat, gps.lng]
@@ -87,14 +102,19 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
 
   const chartData = useMemo(() => {
     return S24_ULTRA_OPTICS.map((lens) => {
-      const calc = calculateNpfExposure(lens, declinationDeg, toleranceK, bortleClass);
+      const calc = calculateNpfExposure(
+        lens,
+        declinationDeg,
+        toleranceK,
+        Math.round(effectiveSky.effectiveBortle)
+      );
       return {
         lens,
         npf: calc.npfSeconds,
         rule500: calc.rule500Seconds,
       };
     });
-  }, [declinationDeg, toleranceK, bortleClass]);
+  }, [declinationDeg, toleranceK, effectiveSky.effectiveBortle]);
 
   const maxChartSec = useMemo(() => {
     const peak = Math.max(...chartData.flatMap((d) => [d.npf, d.rule500]), 15);
@@ -152,7 +172,7 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
 
   return (
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 py-4 sm:py-6 pb-24 md:pb-10">
-      {/* Mobile Immediate Readout Summary (eliminates scrolling past parameters on phone) */}
+      {/* Mobile Immediate Readout Summary */}
       <div className="lg:hidden mb-4 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-3">
           <div className="text-[10px] font-mono uppercase text-[var(--text-muted)]">NPF Max</div>
@@ -175,23 +195,25 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
           </div>
         </div>
         <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-3">
-          <div className="text-[10px] font-mono uppercase text-[var(--text-muted)]">Sky SQM</div>
+          <div className="text-[10px] font-mono uppercase text-[var(--text-muted)]">Eff. Bortle</div>
           <div className="text-2xl font-mono font-bold text-[var(--text-primary)] tabular-nums">
-            {bortleInfo.sqmMid.toFixed(1)}
-            <span className="text-[10px] text-[var(--text-muted)] ml-1">B{bortleClass}</span>
+            {effectiveSky.effectiveBortle.toFixed(1)}
+            <span className="text-[10px] text-[var(--text-muted)] ml-1">
+              {effectiveSky.moonPenalty > 0 ? `+${effectiveSky.moonPenalty}` : 'Dark'}
+            </span>
           </div>
         </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 items-start">
-        {/* Left Control & Parameter Column (360px desktop, full width mobile) */}
+        {/* Left Control & Parameter Column */}
         <aside className="w-full lg:w-[360px] shrink-0 space-y-5 border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-4 sm:p-5">
           <div>
             <h1 className="font-display text-lg font-semibold text-[var(--text-primary)]">
               S24 Ultra Exposure Console
             </h1>
             <p className="text-xs text-[var(--text-muted)] mt-1">
-              Calibrate NPF pinpoint shutter limits per Expert RAW binning mode and site sky darkness.
+              Calibrate NPF pinpoint shutter limits per Expert RAW binning mode, moonlight, and light pollution.
             </p>
           </div>
 
@@ -208,7 +230,7 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
                     key={lens.id}
                     type="button"
                     onClick={() => onSelectLensId(lens.id)}
-                    className={`w-full text-left px-3 py-2.5 rounded border transition-colors cursor-pointer min-h-[46px] flex items-center justify-between gap-2 ${
+                    className={`w-full text-left px-3 py-2.5 rounded border transition-all cursor-pointer min-h-[46px] flex items-center justify-between gap-2 active:scale-[0.99] ${
                       selected
                         ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/12 text-[var(--text-primary)]'
                         : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]'
@@ -284,14 +306,14 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
             </div>
           </div>
 
-          {/* Bortle Class Selector */}
-          <div className="space-y-2.5 pt-3 border-t border-[var(--border-hairline)]">
+          {/* Bortle Class + Moonlight Skyglow Penalty */}
+          <div className="space-y-3 pt-3 border-t border-[var(--border-hairline)]">
             <div className="flex items-center justify-between text-xs">
               <label htmlFor="bortle-range" className="font-medium text-[var(--text-secondary)]">
-                Bortle Sky Darkness
+                Base Light Pollution (Bortle)
               </label>
               <span className="font-mono font-semibold text-[var(--accent-primary)] tabular-nums">
-                Class {bortleClass} · {bortleInfo.sqmMid.toFixed(1)} SQM
+                Class {bortleClass} · Eff. {effectiveSky.effectiveBortle.toFixed(1)}
               </span>
             </div>
             <input
@@ -304,10 +326,37 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
               onChange={(e) => onChangeBortle(Number(e.target.value))}
               className="w-full telemetry-slider"
             />
+
+            <label className="flex items-center justify-between gap-2 text-xs text-[var(--text-secondary)] cursor-pointer py-1">
+              <span className="inline-flex items-center gap-1.5">
+                <Moon className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
+                <span>
+                  Factor Lunar Glow ({lunar.illuminationPct.toFixed(0)}% illum
+                  {effectiveSky.moonPenalty > 0 ? ` · +${effectiveSky.moonPenalty}` : ''})
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={includeMoonGlow}
+                onChange={(e) => setIncludeMoonGlow(e.target.checked)}
+                className="w-4 h-4 accent-[var(--accent-primary)] shrink-0"
+              />
+            </label>
+
             <p className="text-xs text-[var(--text-muted)] leading-relaxed">
               <span className="text-[var(--text-secondary)] font-medium">{bortleInfo.name}</span> —{' '}
               {bortleInfo.milkyWayNote}
             </p>
+
+            {effectiveSky.skyglowCapSec && (
+              <div className="p-2.5 rounded border border-[var(--status-warning)]/40 bg-[var(--status-warning)]/10 text-[11px] text-[var(--text-primary)] flex items-start gap-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-[var(--status-warning)] shrink-0 mt-0.5" />
+                <span>
+                  High skyglow detected: cap sub-exposures near{' '}
+                  <strong className="font-mono">{effectiveSky.skyglowCapSec}s</strong> and stack multiple DNGs to prevent washed-out backgrounds.
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Site Coordinates & Presets */}
@@ -378,8 +427,8 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
                 lensId: activeLens.id,
                 shutterSec: npfResult.npfSeconds,
                 iso: npfResult.suggestedIso,
-                bortle: bortleClass,
-                notes: `NPF calculation (${activeLens.name}, δ=${declinationDeg}°, k=${toleranceK}). ${npfResult.evNote}.`,
+                bortle: Math.round(effectiveSky.effectiveBortle),
+                notes: `NPF calculation (${activeLens.name}, δ=${declinationDeg}°, k=${toleranceK}, Eff. Bortle ${effectiveSky.effectiveBortle.toFixed(1)}). ${npfResult.evNote}.`,
               })
             }
             className="w-full min-h-[46px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded bg-[var(--accent-primary)] text-[var(--accent-primary-ink)] text-xs font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer"
@@ -391,7 +440,7 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
 
         {/* Main Viewport Stage */}
         <section className="flex-1 min-w-0 w-full space-y-5 sm:space-y-6">
-          {/* Desktop Primary KPI Telemetry Row (hidden on <lg because mobile summary sits at top) */}
+          {/* Desktop Primary KPI Telemetry Row */}
           <div className="hidden lg:grid grid-cols-4 gap-4">
             <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-4">
               <div className="text-[11px] font-mono uppercase tracking-wider text-[var(--text-muted)]">
@@ -442,7 +491,7 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
 
             <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-4">
               <div className="text-[11px] font-mono uppercase tracking-wider text-[var(--text-muted)]">
-                Sky Quality (NELM)
+                Effective Sky Quality
               </div>
               <div className="mt-1.5 flex items-baseline">
                 <span className="text-3xl font-mono font-bold text-[var(--text-primary)] tabular-nums">
@@ -451,10 +500,23 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
                 <span className="text-xs font-mono text-[var(--text-muted)] ml-1.5">MAG/″²</span>
               </div>
               <div className="mt-1.5 text-xs text-[var(--text-muted)] truncate">
-                Bortle {bortleClass} · Limiting Mag {bortleInfo.nelm}
+                Eff. Bortle {effectiveSky.effectiveBortle.toFixed(1)} · NELM {bortleInfo.nelm}
               </div>
             </div>
           </div>
+
+          {/* Interactive Live S24 Ultra Sky & Star-Trail Simulator */}
+          <SkySimulatorCanvas
+            lens={activeLens}
+            npfSeconds={npfResult.npfSeconds}
+            rule500Seconds={npfResult.rule500Seconds}
+            effectiveBortle={effectiveSky.effectiveBortle}
+            cloudLowPct={skyConditions?.lowCloudPct ?? 0}
+            cloudMidPct={skyConditions?.midCloudPct ?? 0}
+            cloudHighPct={skyConditions?.highCloudPct ?? 0}
+            lunarIllumPct={lunar.illuminationPct}
+            includeMoonGlow={includeMoonGlow}
+          />
 
           {/* Dual-Curve NPF vs 500-Rule Calibration Chart */}
           <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-4 sm:p-5">
@@ -479,7 +541,7 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
               </div>
             </div>
 
-            {/* Mobile Vertical Dual-Bar Comparison (Zero Horizontal Scroll) */}
+            {/* Mobile Vertical Dual-Bar Comparison */}
             <div className="sm:hidden space-y-2.5">
               {chartData.map((d) => {
                 const isSelected = d.lens.id === activeLens.id;
@@ -667,7 +729,7 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
             </div>
           </div>
 
-          {/* Lunar Telemetry + Twilight + Live Cloud/Dew Conditions */}
+          {/* Lunar Telemetry + Twilight + Live Cloud Altitude Layers & Dew Telemetry */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
             {/* Lunar Phase & Twilight Card */}
             <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-4 sm:p-5 space-y-4">
@@ -733,12 +795,12 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
               </div>
             </div>
 
-            {/* Live Open-Meteo Sky Conditions Card */}
+            {/* Live Open-Meteo Cloud Altitude Layers & Dew Telemetry */}
             <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-4 sm:p-5 space-y-4">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <h2 className="font-display text-base font-semibold text-[var(--text-primary)]">
-                    Local Sky & Lens Dew Telemetry
+                    Total Cloud Layers & Lens Dew
                   </h2>
                   <p className="text-[11px] font-mono text-[var(--text-muted)] mt-0.5 truncate">
                     {skyConditions
@@ -763,22 +825,12 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                     <div className="p-3 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] flex sm:block items-center justify-between gap-2">
-                      <div>
-                        <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1">
-                          <Cloud className="w-3.5 h-3.5 text-[var(--accent-secondary)] shrink-0" />
-                          <span>Total Cloud</span>
-                        </div>
-                        <div className="text-[10px] font-mono text-[var(--text-muted)] sm:hidden mt-0.5">
-                          L:{skyConditions.lowCloudPct}% · M:{skyConditions.midCloudPct}% · H:{skyConditions.highCloudPct}%
-                        </div>
+                      <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1">
+                        <Cloud className="w-3.5 h-3.5 text-[var(--accent-secondary)] shrink-0" />
+                        <span>Total Cloud</span>
                       </div>
-                      <div className="text-right sm:text-left">
-                        <div className="text-xl font-mono font-bold text-[var(--text-primary)] sm:mt-1 tabular-nums">
-                          {skyConditions.cloudCoverPct}%
-                        </div>
-                        <div className="hidden sm:block text-[10px] font-mono text-[var(--text-muted)] mt-0.5">
-                          L:{skyConditions.lowCloudPct}% M:{skyConditions.midCloudPct}% H:{skyConditions.highCloudPct}%
-                        </div>
+                      <div className="text-xl font-mono font-bold text-[var(--text-primary)] sm:mt-1 tabular-nums">
+                        {skyConditions.cloudCoverPct}%
                       </div>
                     </div>
 
@@ -789,7 +841,7 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
                           <span>Dew Spread</span>
                         </div>
                         <div className="text-[10px] font-mono text-[var(--text-muted)] sm:hidden mt-0.5">
-                          Temp {skyConditions.tempC}°C / DP {skyConditions.dewPointC}°C
+                          {skyConditions.tempC}°C / DP {skyConditions.dewPointC}°C
                         </div>
                       </div>
                       <div className="text-right sm:text-left">
@@ -822,6 +874,28 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
                         </div>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Cloud Altitude Layers Visual Breakdown */}
+                  <div className="space-y-2 pt-1">
+                    {[
+                      { label: 'High Cirrus (8+ km)', pct: skyConditions.highCloudPct },
+                      { label: 'Mid Deck (3–8 km)', pct: skyConditions.midCloudPct },
+                      { label: 'Low Stratus / Fog (0–3 km)', pct: skyConditions.lowCloudPct },
+                    ].map((layer) => (
+                      <div key={layer.label} className="space-y-1">
+                        <div className="flex justify-between text-[11px] font-mono text-[var(--text-muted)]">
+                          <span>{layer.label}</span>
+                          <span className="tabular-nums text-[var(--text-secondary)]">{layer.pct}%</span>
+                        </div>
+                        <div className="h-1.5 w-full rounded bg-[var(--bg-canvas)] overflow-hidden">
+                          <div
+                            className="h-full bg-[var(--accent-secondary)] transition-all duration-300"
+                            style={{ width: `${Math.min(100, layer.pct)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
                   {dewRisk && (

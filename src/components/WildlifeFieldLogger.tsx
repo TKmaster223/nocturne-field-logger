@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Aperture,
   Camera,
   Check,
   Copy,
@@ -12,6 +13,7 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 import { S24_ULTRA_OPTICS, WILDLIFE_SPECIES_PRESETS } from '../data/s24Optics';
 import {
   CaptureCategory,
@@ -136,6 +138,129 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
     }
   };
 
+  const handleLoadSampleShot = async (preset: 'frog' | 'astro') => {
+    const isAstro = preset === 'astro';
+    const canvas = document.createElement('canvas');
+    canvas.width = 640;
+    canvas.height = 420;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      if (isAstro) {
+        grad.addColorStop(0, '#040814');
+        grad.addColorStop(1, '#0d192b');
+      } else {
+        grad.addColorStop(0, '#0b1815');
+        grad.addColorStop(1, '#162721');
+      }
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (isAstro) {
+        for (let i = 0; i < 160; i++) {
+          const sx = ((i * 197 + 31) % 640);
+          const sy = ((i * 113 + 17) % 340);
+          const r = (i % 9 === 0) ? 1.8 : 0.9;
+          ctx.fillStyle = i % 7 === 0 ? 'rgba(130, 212, 255, 0.85)' : 'rgba(241, 245, 249, 0.8)';
+          ctx.beginPath();
+          ctx.arc(sx, sy, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = '#070b12';
+        ctx.beginPath();
+        ctx.moveTo(0, 380);
+        ctx.lineTo(140, 330);
+        ctx.lineTo(290, 360);
+        ctx.lineTo(470, 320);
+        ctx.lineTo(640, 365);
+        ctx.lineTo(640, 420);
+        ctx.lineTo(0, 420);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(320, 310, 170, 42, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = '#2d4d3e';
+        ctx.beginPath();
+        ctx.ellipse(320, 295, 95, 26, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#74a87e';
+        ctx.beginPath();
+        ctx.ellipse(315, 272, 28, 18, -0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#e5a83b';
+        ctx.beginPath();
+        ctx.arc(330, 260, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.55)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(20, 20, 600, 380);
+      ctx.fillStyle = 'rgba(241, 245, 249, 0.78)';
+      ctx.font = '13px monospace';
+      ctx.fillText(
+        isAstro
+          ? 'SM-S928B · 24mm f/1.7 · 9.9s · ISO 800 · SAMPLE FRAME'
+          : 'SM-S928B · 111mm 5x · 1/500s · f/3.4 · ISO 200 · SAMPLE FRAME',
+        32,
+        44
+      );
+    }
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.92)
+    );
+    if (!blob) return;
+
+    const fileName = isAstro
+      ? `S24U_Sample_MilkyWay_${Date.now()}.jpg`
+      : `S24U_Sample_PondFrog_${Date.now()}.jpg`;
+    const sampleFile = new File([blob], fileName, { type: 'image/jpeg' });
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+    const lens = isAstro ? S24_ULTRA_OPTICS[1] : S24_ULTRA_OPTICS[5];
+
+    const sampleExif: ExifMetadata = {
+      cameraMake: 'Samsung',
+      cameraModel: 'SM-S928B (Galaxy S24 Ultra)',
+      lensName: lens.name,
+      shutterSec: isAstro ? 9.9 : 0.002,
+      shutterDisplay: isAstro ? '9.9s' : '1/500s',
+      iso: isAstro ? 800 : 200,
+      aperture: lens.aperture,
+      focalLengthMm: lens.focalLengthActualMm,
+      focalLength35Mm: lens.focalLength35EqMm,
+      resolutionMode: `${lens.resolutionMp} MP Sample Frame`,
+      whiteBalance: isAstro ? '4200K Manual' : 'Auto Daylight',
+      capturedAt: new Date().toISOString(),
+      fileName,
+      fileSizeBytes: sampleFile.size,
+      mimeType: 'image/jpeg',
+      isRawDng: false,
+      isUneditedOriginal: true,
+      parsedFromFile: true,
+    };
+
+    setPendingFile(sampleFile);
+    setParsedExif(sampleExif);
+    setParsedGps(gps);
+    setPreviewUrl(dataUrl);
+    setSelectedLensId(lens.id);
+    setShutterSec(sampleExif.shutterSec);
+    setIso(sampleExif.iso);
+    setCategory(isAstro ? CaptureCategory.Astro : CaptureCategory.Wildlife);
+    setSpeciesTag(isAstro ? 'Night Sky' : 'Frog');
+    setNotes(
+      isAstro
+        ? 'Sample Expert RAW starfield test frame ready for uncompressed document export.'
+        : 'Sample 5x periscope wetland frog sighting ready for uncompressed WhatsApp export.'
+    );
+    onNotify(`Loaded ${isAstro ? 'Sample Night Sky' : 'Sample Pond Frog'} (${formatFileSize(sampleFile.size)}) — tap Save Capture to test logbook & export.`);
+  };
+
   const handleSaveEntry = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanSpecies =
@@ -195,6 +320,32 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
       setSaving(false);
     }
   };
+
+  const collectionStats = useMemo(() => {
+    let frogs = 0;
+    let chickens = 0;
+    let ducks = 0;
+    let nightSkies = 0;
+    let totalBytes = 0;
+
+    for (const item of logs) {
+      const tag = item.speciesTag.toLowerCase();
+      if (tag.includes('frog') || tag.includes('toad')) frogs++;
+      if (tag.includes('chicken') || tag.includes('hen') || tag.includes('rooster')) chickens++;
+      if (tag.includes('duck') || tag.includes('mallard')) ducks++;
+      if (item.category === CaptureCategory.Astro || tag.includes('sky')) nightSkies++;
+      if (item.hasOriginalBlob) totalBytes += item.exif.fileSizeBytes || 0;
+    }
+
+    return {
+      total: logs.length,
+      frogs,
+      chickens,
+      ducks,
+      nightSkies,
+      totalBytes,
+    };
+  }, [logs]);
 
   const filteredLogs = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -314,6 +465,26 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                 </div>
               </div>
             )}
+          </div>
+
+          {/* One-Tap Sample Shot Sandbox Triggers */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => void handleLoadSampleShot('frog')}
+              className="min-h-[38px] px-2.5 py-1.5 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[11px] font-medium text-[var(--text-secondary)] hover:border-[var(--accent-secondary)] hover:text-[var(--text-primary)] inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <Aperture className="w-3.5 h-3.5 text-[var(--accent-secondary)] shrink-0" />
+              <span className="truncate">Sample Pond Frog</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleLoadSampleShot('astro')}
+              className="min-h-[38px] px-2.5 py-1.5 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[11px] font-medium text-[var(--text-secondary)] hover:border-[var(--accent-primary)] hover:text-[var(--text-primary)] inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <Aperture className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
+              <span className="truncate">Sample Night Sky</span>
+            </button>
           </div>
 
           <form onSubmit={handleSaveEntry} className="space-y-4">
@@ -500,6 +671,34 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
 
         {/* Right Field Logbook & WhatsApp Document Export Stage */}
         <section className="flex-1 min-w-0 w-full space-y-4 sm:space-y-5">
+          {/* Live Field Collection Tally Bar */}
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
+            {[
+              { label: 'Total Logs', value: String(collectionStats.total), accent: 'text-[var(--text-primary)]' },
+              { label: 'Frogs', value: String(collectionStats.frogs), accent: 'text-[var(--accent-secondary)]' },
+              { label: 'Chickens', value: String(collectionStats.chickens), accent: 'text-[var(--accent-primary)]' },
+              { label: 'Ducks', value: String(collectionStats.ducks), accent: 'text-[var(--accent-secondary)]' },
+              { label: 'Night Skies', value: String(collectionStats.nightSkies), accent: 'text-[var(--accent-primary)]' },
+              {
+                label: 'RAW Payload',
+                value: collectionStats.totalBytes > 0 ? formatFileSize(collectionStats.totalBytes) : '0 B',
+                accent: 'text-[var(--text-primary)]',
+              },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg px-3 py-2.5"
+              >
+                <div className="text-[10px] font-mono uppercase text-[var(--text-muted)] truncate">
+                  {stat.label}
+                </div>
+                <div className={`text-lg font-mono font-bold tabular-nums mt-0.5 truncate ${stat.accent}`}>
+                  {stat.value}
+                </div>
+              </div>
+            ))}
+          </div>
+
           {/* Responsive Toolbar */}
           <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="grid grid-cols-3 sm:flex items-center gap-1 p-1 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] w-full sm:w-auto">
@@ -576,13 +775,19 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredLogs.map((log) => {
-                const isExpanded = expandedId === log.id;
-                return (
-                  <article
-                    key={log.id}
-                    className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-4 space-y-3"
-                  >
+              <AnimatePresence initial={false}>
+                {filteredLogs.map((log) => {
+                  const isExpanded = expandedId === log.id;
+                  return (
+                    <motion.article
+                      layout
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.18 }}
+                      key={log.id}
+                      className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-4 space-y-3"
+                    >
                     <div className="flex flex-col sm:flex-row gap-3.5 sm:gap-4 justify-between">
                       {/* Thumbnail / Raw Sensor Fallback */}
                       <div className="flex gap-3 sm:gap-3.5 min-w-0">
@@ -725,9 +930,10 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                         </div>
                       </div>
                     )}
-                  </article>
-                );
-              })}
+                    </motion.article>
+                  );
+                })}
+              </AnimatePresence>
             </div>
           )}
         </section>

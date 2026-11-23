@@ -52,6 +52,24 @@ export function getBortleInfo(bortle: number): BortleScaleInfo {
   return BORTLE_SCALE_REFERENCE.find((b) => b.bortle === clamped) ?? BORTLE_SCALE_REFERENCE[3];
 }
 
+export function calculateEffectiveBortle(
+  baseBortle: number,
+  lunarIlluminationPct: number,
+  includeMoonGlow: boolean
+): { effectiveBortle: number; moonPenalty: number; skyglowCapSec: number | null } {
+  const moonFactor = includeMoonGlow ? Math.max(0, Math.min(1, lunarIlluminationPct / 100)) : 0;
+  // Dark sites lose more Bortle steps under a bright moon than already-bright urban skies
+  const headroom = Math.max(0, (9 - baseBortle) / 8);
+  const moonPenalty = Math.round(moonFactor * 2.6 * headroom * 10) / 10;
+  const effectiveBortle = Math.min(9, Math.round((baseBortle + moonPenalty) * 10) / 10);
+
+  let skyglowCapSec: number | null = null;
+  if (effectiveBortle >= 7.5) skyglowCapSec = 4;
+  else if (effectiveBortle >= 6) skyglowCapSec = 6;
+
+  return { effectiveBortle, moonPenalty, skyglowCapSec };
+}
+
 export function calculateLunarTelemetry(date: Date = new Date()): LunarTelemetry {
   // Known new moon reference: 2000-01-06 18:14 UTC
   const synodicMonth = 29.53058867;

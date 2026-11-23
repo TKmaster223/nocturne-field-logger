@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { TopBar } from './components/TopBar';
 import { SkyNpfWorkbench } from './components/SkyNpfWorkbench';
 import { CelestialTimersView } from './components/CelestialTimersView';
@@ -216,64 +217,80 @@ export default function App() {
       />
 
       <main className="flex-1">
-        {activeTab === WorkbenchTab.SkyNpf && (
-          <SkyNpfWorkbench
-            selectedLensId={selectedLensId}
-            onSelectLensId={setSelectedLensId}
-            bortleClass={bortleClass}
-            onChangeBortle={setBortleClass}
-            gps={gps}
-            onUpdateManualGps={(lat, lng, label) =>
-              setGps({ lat, lng, label: label || 'Custom Site' })
-            }
-            onLocateGps={handleLocateGps}
-            gpsLocating={gpsLocating}
-            skyConditions={skyConditions}
-            skyLoading={skyLoading}
-            skyError={skyError}
-            onRefreshSky={() => void refreshSky(gps.lat, gps.lng)}
-            onApplyToFieldLog={(draft) => {
-              setPrefilledDraft(draft);
-              setActiveTab(WorkbenchTab.FieldLog);
-            }}
-          />
-        )}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.16 }}
+          >
+            {activeTab === WorkbenchTab.SkyNpf && (
+              <SkyNpfWorkbench
+                selectedLensId={selectedLensId}
+                onSelectLensId={setSelectedLensId}
+                bortleClass={bortleClass}
+                onChangeBortle={setBortleClass}
+                gps={gps}
+                onUpdateManualGps={(lat, lng, label) =>
+                  setGps({ lat, lng, label: label || 'Custom Site' })
+                }
+                onLocateGps={handleLocateGps}
+                gpsLocating={gpsLocating}
+                skyConditions={skyConditions}
+                skyLoading={skyLoading}
+                skyError={skyError}
+                onRefreshSky={() => void refreshSky(gps.lat, gps.lng)}
+                onApplyToFieldLog={(draft) => {
+                  setPrefilledDraft(draft);
+                  setActiveTab(WorkbenchTab.FieldLog);
+                }}
+              />
+            )}
 
-        {activeTab === WorkbenchTab.Timers && <CelestialTimersView />}
+            {activeTab === WorkbenchTab.Timers && <CelestialTimersView />}
 
-        {activeTab === WorkbenchTab.FieldLog && (
-          <WildlifeFieldLogger
-            logs={logs}
-            gps={gps}
-            bortleClass={bortleClass}
-            prefilledDraft={prefilledDraft}
-            onConsumeDraft={() => setPrefilledDraft(null)}
-            onSaveLog={handleSaveLog}
-            onDeleteLog={handleDeleteLog}
-            onNotify={notify}
-          />
-        )}
+            {activeTab === WorkbenchTab.FieldLog && (
+              <WildlifeFieldLogger
+                logs={logs}
+                gps={gps}
+                bortleClass={bortleClass}
+                prefilledDraft={prefilledDraft}
+                onConsumeDraft={() => setPrefilledDraft(null)}
+                onSaveLog={handleSaveLog}
+                onDeleteLog={handleDeleteLog}
+                onNotify={notify}
+              />
+            )}
 
-        {activeTab === WorkbenchTab.Optics && (
-          <OpticsReferenceView
-            onLoadLensInNpf={(lensId) => {
-              setSelectedLensId(lensId);
-              setActiveTab(WorkbenchTab.SkyNpf);
-            }}
-          />
-        )}
+            {activeTab === WorkbenchTab.Optics && (
+              <OpticsReferenceView
+                onLoadLensInNpf={(lensId) => {
+                  setSelectedLensId(lensId);
+                  setActiveTab(WorkbenchTab.SkyNpf);
+                }}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* Non-intrusive bottom toast feedback */}
-      {toastMsg && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="fixed bottom-20 left-4 right-4 sm:left-auto sm:right-6 md:bottom-6 z-50 sm:max-w-sm px-4 py-2.5 rounded-md border border-[var(--border-strong)] bg-[var(--bg-elevated)] text-xs text-[var(--text-primary)] shadow-lg"
-        >
-          {toastMsg}
-        </div>
-      )}
+      <AnimatePresence>
+        {toastMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.18 }}
+            role="status"
+            aria-live="polite"
+            className="fixed bottom-20 left-4 right-4 sm:left-auto sm:right-6 md:bottom-6 z-50 sm:max-w-sm px-4 py-2.5 rounded-md border border-[var(--border-strong)] bg-[var(--bg-elevated)] text-xs text-[var(--text-primary)] shadow-lg"
+          >
+            {toastMsg}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
