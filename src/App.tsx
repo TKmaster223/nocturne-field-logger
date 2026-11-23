@@ -269,7 +269,7 @@ export default function App() {
         <div
           role="status"
           aria-live="polite"
-          className="fixed bottom-16 md:bottom-6 right-4 sm:right-6 z-50 max-w-sm px-4 py-2.5 rounded-md border border-[var(--border-strong)] bg-[var(--bg-elevated)] text-xs text-[var(--text-primary)] shadow-lg"
+          className="fixed bottom-20 left-4 right-4 sm:left-auto sm:right-6 md:bottom-6 z-50 sm:max-w-sm px-4 py-2.5 rounded-md border border-[var(--border-strong)] bg-[var(--bg-elevated)] text-xs text-[var(--text-primary)] shadow-lg"
         >
           {toastMsg}
         </div>

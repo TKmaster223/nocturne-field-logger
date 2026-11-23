@@ -55,11 +55,10 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Composer state
   const [category, setCategory] = useState<CaptureCategory>(CaptureCategory.Wildlife);
   const [speciesTag, setSpeciesTag] = useState<string>('Frog');
   const [selectedLensId, setSelectedLensId] = useState<string>('tele3x-67');
-  const [shutterSec, setShutterSec] = useState<number>(0.002); // 1/500s
+  const [shutterSec, setShutterSec] = useState<number>(0.002);
   const [iso, setIso] = useState<number>(200);
   const [bortle, setBortle] = useState<number>(bortleClass);
   const [notes, setNotes] = useState<string>('');
@@ -72,7 +71,6 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
   const [saving, setSaving] = useState<boolean>(false);
   const [dragActive, setDragActive] = useState<boolean>(false);
 
-  // Logbook filter state
   const [filter, setFilter] = useState<LogFilter>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -140,7 +138,8 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
 
   const handleSaveEntry = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanSpecies = speciesTag.trim() || (category === CaptureCategory.Astro ? 'Night Sky' : 'Unclassified');
+    const cleanSpecies =
+      speciesTag.trim() || (category === CaptureCategory.Astro ? 'Night Sky' : 'Unclassified');
     setSaving(true);
     try {
       const id =
@@ -158,7 +157,9 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
         aperture: activeLens.aperture,
         focalLengthMm: activeLens.focalLengthActualMm,
         focalLength35Mm: activeLens.focalLength35EqMm,
-        resolutionMode: `${activeLens.resolutionMp} MP ${category === CaptureCategory.Astro ? 'Expert RAW' : 'Manual Log'}`,
+        resolutionMode: `${activeLens.resolutionMp} MP ${
+          category === CaptureCategory.Astro ? 'Expert RAW' : 'Manual Log'
+        }`,
         whiteBalance: 'Native Daylight / Manual',
         capturedAt: new Date().toISOString(),
         fileName: `${cleanSpecies.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}.dng`,
@@ -184,7 +185,6 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
 
       await onSaveLog(entry, pendingFile);
 
-      // Reset transient file attachment after saving
       setPendingFile(null);
       setParsedExif(null);
       setParsedGps(null);
@@ -229,16 +229,16 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
   };
 
   return (
-    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 py-6 pb-24 md:pb-12">
+    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 py-4 sm:py-6 pb-24 md:pb-12">
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         {/* Left Capture & EXIF Composer Column */}
-        <aside className="w-full lg:w-[400px] shrink-0 border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-5 space-y-5">
+        <aside className="w-full lg:w-[400px] shrink-0 border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-4 sm:p-5 space-y-5">
           <div>
             <h1 className="font-display text-lg font-semibold text-[var(--text-primary)]">
               RAW & Wildlife Field Capture
             </h1>
             <p className="text-xs text-[var(--text-muted)] mt-1">
-              Drop an unedited Galaxy S24 Ultra .dng or .jpg to read EXIF/GPS bytes, or quick-log directly in the field.
+              Select a Galaxy S24 Ultra .dng or .jpg to read EXIF/GPS bytes, or quick-log directly in the field.
             </p>
           </div>
 
@@ -259,7 +259,7 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                 fileInputRef.current?.click();
               }
             }}
-            className={`rounded-md border border-dashed p-4 text-center cursor-pointer transition-colors ${
+            className={`rounded-md border border-dashed p-4 text-center cursor-pointer transition-colors min-h-[84px] flex flex-col justify-center ${
               dragActive
                 ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10'
                 : 'border-[var(--border-strong)] bg-[var(--bg-canvas)] hover:border-[var(--accent-secondary)]'
@@ -277,11 +277,11 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
             />
 
             {parsingFile ? (
-              <div className="py-3 text-xs font-mono text-[var(--accent-secondary)]">
+              <div className="py-2 text-xs font-mono text-[var(--accent-secondary)]">
                 Decoding TIFF/IFD & GPS headers...
               </div>
             ) : pendingFile && parsedExif ? (
-              <div className="space-y-2 text-left">
+              <div className="space-y-1.5 text-left">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-mono font-semibold text-[var(--text-primary)] truncate">
                     {parsedExif.fileName}
@@ -304,13 +304,13 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="py-2 space-y-1.5">
+              <div className="py-1 space-y-1.5">
                 <Upload className="w-5 h-5 mx-auto text-[var(--accent-secondary)]" />
                 <div className="text-xs font-medium text-[var(--text-primary)]">
-                  Select or drop Expert RAW (.dng) / JPEG
+                  Tap or drop Expert RAW (.dng) / JPEG
                 </div>
                 <div className="text-[11px] text-[var(--text-muted)]">
-                  100% client-side EXIF & thumbnail extraction · Zero cloud upload
+                  100% client-side EXIF & thumbnail extraction
                 </div>
               </div>
             )}
@@ -325,7 +325,7 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                   setCategory(CaptureCategory.Wildlife);
                   if (speciesTag === 'Night Sky') setSpeciesTag('Frog');
                 }}
-                className={`min-h-[40px] text-xs font-medium rounded transition-colors cursor-pointer ${
+                className={`min-h-[42px] text-xs font-medium rounded transition-colors cursor-pointer ${
                   category === CaptureCategory.Wildlife
                     ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-ink)] font-semibold'
                     : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
@@ -339,7 +339,7 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                   setCategory(CaptureCategory.Astro);
                   setSpeciesTag('Night Sky');
                 }}
-                className={`min-h-[40px] text-xs font-medium rounded transition-colors cursor-pointer ${
+                className={`min-h-[42px] text-xs font-medium rounded transition-colors cursor-pointer ${
                   category === CaptureCategory.Astro
                     ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-ink)] font-semibold'
                     : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
@@ -349,12 +349,12 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
               </button>
             </div>
 
-            {/* Quick Species Tagger */}
+            {/* Quick Species Tagger (2x2 on narrow mobile, 4-col on sm+) */}
             <div className="space-y-2">
               <span className="block text-xs font-medium text-[var(--text-secondary)]">
                 Quick Species / Target Tag
               </span>
-              <div className="grid grid-cols-4 gap-1.5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {WILDLIFE_SPECIES_PRESETS.map((sp) => {
                   const active = speciesTag.toLowerCase() === sp.label.toLowerCase();
                   return (
@@ -369,7 +369,7 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                             : CaptureCategory.Wildlife
                         );
                       }}
-                      className={`min-h-[40px] px-2 py-1.5 rounded border text-xs font-medium transition-colors cursor-pointer truncate ${
+                      className={`min-h-[44px] px-2.5 py-1.5 rounded border text-xs font-medium transition-colors cursor-pointer whitespace-nowrap truncate ${
                         active
                           ? 'border-[var(--accent-secondary)] bg-[var(--accent-secondary)]/15 text-[var(--text-primary)]'
                           : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
@@ -385,11 +385,11 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                 value={speciesTag}
                 onChange={(e) => setSpeciesTag(e.target.value)}
                 placeholder="Or enter custom species (e.g. Tree Frog, Mallard, Orion)..."
-                className="w-full px-3 py-2 text-xs rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] focus:border-[var(--accent-secondary)] outline-none"
+                className="w-full min-h-[42px] px-3 py-2 text-xs rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] focus:border-[var(--accent-secondary)] outline-none"
               />
             </div>
 
-            {/* Manual EXIF / Optic Overrides (used if no DNG uploaded or for adjustments) */}
+            {/* Manual EXIF / Optic Overrides */}
             {!parsedExif && (
               <div className="space-y-3 pt-2 border-t border-[var(--border-hairline)]">
                 <div>
@@ -399,7 +399,7 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                   <select
                     value={selectedLensId}
                     onChange={(e) => setSelectedLensId(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] focus:border-[var(--accent-secondary)] outline-none"
+                    className="w-full min-h-[42px] px-3 py-2 text-xs rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] focus:border-[var(--accent-secondary)] outline-none"
                   >
                     {S24_ULTRA_OPTICS.map((lens) => (
                       <option key={lens.id} value={lens.id}>
@@ -421,7 +421,7 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                       max="60"
                       value={shutterSec}
                       onChange={(e) => setShutterSec(Math.max(0.0001, Number(e.target.value)))}
-                      className="w-full px-2.5 py-2 text-xs font-mono rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] outline-none"
+                      className="w-full min-h-[42px] px-2.5 py-2 text-xs font-mono rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] outline-none"
                     />
                   </div>
                   <div>
@@ -435,7 +435,7 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                       max="12800"
                       value={iso}
                       onChange={(e) => setIso(Math.max(50, Number(e.target.value)))}
-                      className="w-full px-2.5 py-2 text-xs font-mono rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] outline-none"
+                      className="w-full min-h-[42px] px-2.5 py-2 text-xs font-mono rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] outline-none"
                     />
                   </div>
                   <div>
@@ -450,7 +450,7 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                       onChange={(e) =>
                         setBortle(Math.min(9, Math.max(1, Number(e.target.value))))
                       }
-                      className="w-full px-2.5 py-2 text-xs font-mono rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] outline-none"
+                      className="w-full min-h-[42px] px-2.5 py-2 text-xs font-mono rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] outline-none"
                     />
                   </div>
                 </div>
@@ -459,10 +459,10 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
 
             {/* GPS Toggle & Field Notes */}
             <div className="space-y-2.5">
-              <label className="flex items-center justify-between gap-2 text-xs text-[var(--text-secondary)] cursor-pointer py-1">
-                <span className="inline-flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-[var(--accent-secondary)]" />
-                  <span>
+              <label className="flex items-center justify-between gap-2 text-xs text-[var(--text-secondary)] cursor-pointer min-h-[36px]">
+                <span className="inline-flex items-center gap-1.5 min-w-0">
+                  <MapPin className="w-3.5 h-3.5 text-[var(--accent-secondary)] shrink-0" />
+                  <span className="truncate">
                     {parsedGps
                       ? `EXIF GPS: ${parsedGps.lat.toFixed(4)}°, ${parsedGps.lng.toFixed(4)}°`
                       : `Attach Site GPS (${gps.lat.toFixed(4)}°, ${gps.lng.toFixed(4)}°)`}
@@ -473,7 +473,7 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                     type="checkbox"
                     checked={attachGps}
                     onChange={(e) => setAttachGps(e.target.checked)}
-                    className="w-4 h-4 accent-[var(--accent-primary)]"
+                    className="w-5 h-5 accent-[var(--accent-primary)] shrink-0"
                   />
                 )}
               </label>
@@ -490,7 +490,7 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
             <button
               type="submit"
               disabled={saving}
-              className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded bg-[var(--accent-primary)] text-[var(--accent-primary-ink)] text-xs font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
+              className="w-full min-h-[46px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded bg-[var(--accent-primary)] text-[var(--accent-primary-ink)] text-xs font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50"
             >
               <Camera className="w-4 h-4" />
               <span>{saving ? 'Saving to Offline Logbook...' : 'Save Capture to Field Log'}</span>
@@ -499,10 +499,10 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
         </aside>
 
         {/* Right Field Logbook & WhatsApp Document Export Stage */}
-        <section className="flex-1 min-w-0 w-full space-y-5">
-          {/* Toolbar */}
-          <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-1 p-1 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)]">
+        <section className="flex-1 min-w-0 w-full space-y-4 sm:space-y-5">
+          {/* Responsive Toolbar */}
+          <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="grid grid-cols-3 sm:flex items-center gap-1 p-1 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] w-full sm:w-auto">
               {[
                 { id: 'all' as LogFilter, label: `All (${logs.length})` },
                 {
@@ -518,7 +518,7 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                   key={tab.id}
                   type="button"
                   onClick={() => setFilter(tab.id)}
-                  className={`min-h-[38px] px-3 py-1 text-xs font-medium rounded transition-colors cursor-pointer whitespace-nowrap ${
+                  className={`min-h-[40px] sm:min-h-[38px] px-2.5 sm:px-3 py-1 text-xs font-medium rounded transition-colors cursor-pointer whitespace-nowrap truncate ${
                     filter === tab.id
                       ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-ink)] font-semibold'
                       : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
@@ -529,15 +529,15 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
               ))}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 flex-1 sm:flex-initial justify-end">
-              <div className="relative flex-1 sm:w-52">
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <div className="relative flex-1 sm:w-48">
                 <Search className="w-3.5 h-3.5 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="search"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search species, lens..."
-                  className="w-full pl-8 pr-3 py-2 text-xs rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] focus:border-[var(--accent-secondary)] outline-none"
+                  className="w-full min-h-[40px] pl-8 pr-3 py-2 text-xs rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] focus:border-[var(--accent-secondary)] outline-none"
                 />
               </div>
 
@@ -545,7 +545,7 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                 type="button"
                 disabled={logs.length === 0}
                 onClick={() => exportLogsAsCsv(logs)}
-                className="min-h-[38px] px-3 py-1.5 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-xs font-medium text-[var(--text-secondary)] hover:border-[var(--border-strong)] inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-40 whitespace-nowrap"
+                className="min-h-[40px] px-3 py-1.5 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-xs font-medium text-[var(--text-secondary)] hover:border-[var(--border-strong)] inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-40 whitespace-nowrap shrink-0"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>CSV</span>
@@ -555,7 +555,7 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                 type="button"
                 disabled={logs.length === 0}
                 onClick={() => exportLogsAsJson(logs)}
-                className="min-h-[38px] px-3 py-1.5 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-xs font-medium text-[var(--text-secondary)] hover:border-[var(--border-strong)] inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-40 whitespace-nowrap"
+                className="min-h-[40px] px-3 py-1.5 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-xs font-medium text-[var(--text-secondary)] hover:border-[var(--border-strong)] inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-40 whitespace-nowrap shrink-0"
               >
                 <FileCode2 className="w-3.5 h-3.5" />
                 <span>JSON</span>
@@ -565,13 +565,13 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
 
           {/* Logbook Entries */}
           {filteredLogs.length === 0 ? (
-            <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-10 text-center space-y-2">
+            <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-8 sm:p-10 text-center space-y-2">
               <Camera className="w-8 h-8 mx-auto text-[var(--text-muted)]" />
               <h2 className="font-display text-base font-semibold text-[var(--text-primary)]">
                 {logs.length === 0 ? 'No Field Captures Logged Yet' : 'No Matching Entries'}
               </h2>
               <p className="text-xs text-[var(--text-muted)] max-w-md mx-auto">
-                Drop a Samsung Expert RAW (.dng) or unedited JPEG into the left panel, or tap Frog / Chicken / Duck to record an instant field sighting offline.
+                Select a Samsung Expert RAW (.dng) or unedited JPEG above, or tap Frog / Chicken / Duck to record an instant field sighting offline.
               </p>
             </div>
           ) : (
@@ -583,10 +583,10 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                     key={log.id}
                     className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-4 space-y-3"
                   >
-                    <div className="flex flex-col sm:flex-row gap-4 justify-between">
+                    <div className="flex flex-col sm:flex-row gap-3.5 sm:gap-4 justify-between">
                       {/* Thumbnail / Raw Sensor Fallback */}
-                      <div className="flex gap-3.5 min-w-0">
-                        <div className="w-20 h-20 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] shrink-0 overflow-hidden flex items-center justify-center">
+                      <div className="flex gap-3 sm:gap-3.5 min-w-0">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] shrink-0 overflow-hidden flex items-center justify-center">
                           {log.previewDataUrl ? (
                             <img
                               src={log.previewDataUrl}
@@ -649,11 +649,11 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                       </div>
 
                       {/* Action Buttons */}
-                      <div className="flex flex-wrap sm:flex-col items-stretch sm:items-end justify-between gap-2 shrink-0">
+                      <div className="flex flex-col sm:items-end justify-between gap-2 shrink-0 w-full sm:w-auto">
                         <button
                           type="button"
                           onClick={() => void handleWhatsAppShare(log)}
-                          className="min-h-[40px] px-3.5 py-2 rounded bg-[var(--accent-primary)] text-[var(--accent-primary-ink)] text-xs font-semibold hover:opacity-90 inline-flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                          className="w-full sm:w-auto min-h-[44px] sm:min-h-[40px] px-3.5 py-2 rounded bg-[var(--accent-primary)] text-[var(--accent-primary-ink)] text-xs font-semibold hover:opacity-90 inline-flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
                         >
                           <Share2 className="w-3.5 h-3.5" />
                           <span>
@@ -661,11 +661,11 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                           </span>
                         </button>
 
-                        <div className="flex items-center gap-1.5">
+                        <div className="grid grid-cols-3 sm:flex items-center gap-1.5 w-full sm:w-auto">
                           <button
                             type="button"
                             onClick={() => void handleCopyCaption(log)}
-                            className="min-h-[36px] px-2.5 py-1 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-xs text-[var(--text-secondary)] hover:border-[var(--border-strong)] inline-flex items-center gap-1 cursor-pointer"
+                            className="min-h-[40px] sm:min-h-[36px] px-2.5 py-1 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-xs text-[var(--text-secondary)] hover:border-[var(--border-strong)] inline-flex items-center justify-center gap-1 cursor-pointer"
                             title="Copy WhatsApp EXIF caption"
                           >
                             {copiedId === log.id ? (
@@ -679,7 +679,7 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                           <button
                             type="button"
                             onClick={() => setExpandedId(isExpanded ? null : log.id)}
-                            className="min-h-[36px] px-2.5 py-1 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-xs text-[var(--text-secondary)] hover:border-[var(--border-strong)] cursor-pointer"
+                            className="min-h-[40px] sm:min-h-[36px] px-2.5 py-1 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-xs text-[var(--text-secondary)] hover:border-[var(--border-strong)] cursor-pointer"
                           >
                             {isExpanded ? 'Hide EXIF' : 'EXIF'}
                           </button>
@@ -688,7 +688,7 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                             type="button"
                             onClick={() => void onDeleteLog(log.id)}
                             aria-label={`Delete ${log.speciesTag} log`}
-                            className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-muted)] hover:text-[var(--status-critical)] hover:border-[var(--status-critical)] cursor-pointer"
+                            className="min-h-[40px] sm:min-h-[36px] min-w-[40px] sm:min-w-[36px] inline-flex items-center justify-center rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-muted)] hover:text-[var(--status-critical)] hover:border-[var(--status-critical)] cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -703,7 +703,7 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                     )}
 
                     {isExpanded && (
-                      <div className="pt-3 border-t border-[var(--border-hairline)] grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+                      <div className="pt-3 border-t border-[var(--border-hairline)] grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
                         <div>
                           <div className="text-[10px] text-[var(--text-muted)]">CAMERA</div>
                           <div className="text-[var(--text-primary)] truncate">{log.exif.cameraModel}</div>
@@ -715,7 +715,8 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                         <div>
                           <div className="text-[10px] text-[var(--text-muted)]">FILE / PAYLOAD</div>
                           <div className="text-[var(--text-primary)] truncate">
-                            {log.exif.fileName} ({log.hasOriginalBlob ? formatFileSize(log.exif.fileSizeBytes) : 'Metadata only'})
+                            {log.exif.fileName} (
+                            {log.hasOriginalBlob ? formatFileSize(log.exif.fileSizeBytes) : 'Metadata only'})
                           </div>
                         </div>
                         <div>

@@ -10,7 +10,7 @@ import {
   AlertTriangle,
   CheckCircle2,
 } from 'lucide-react';
-import { BORTLE_SCALE_REFERENCE, S24_ULTRA_OPTICS } from '../data/s24Optics';
+import { S24_ULTRA_OPTICS } from '../data/s24Optics';
 import {
   GpsCoordinates,
   OpticalLensProfile,
@@ -85,7 +85,6 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
     [gps.lat, gps.lng]
   );
 
-  // Comparison dataset for Dual-Curve NPF vs 500-Rule SVG Chart across all 7 optical modes
   const chartData = useMemo(() => {
     return S24_ULTRA_OPTICS.map((lens) => {
       const calc = calculateNpfExposure(lens, declinationDeg, toleranceK, bortleClass);
@@ -102,7 +101,10 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
     return Math.ceil(peak / 5) * 5;
   }, [chartData]);
 
-  const hoveredPoint = chartData.find((d) => d.lens.id === hoveredOpticId) ?? chartData.find((d) => d.lens.id === activeLens.id) ?? chartData[1];
+  const hoveredPoint =
+    chartData.find((d) => d.lens.id === hoveredOpticId) ??
+    chartData.find((d) => d.lens.id === activeLens.id) ??
+    chartData[1];
 
   const handleApplyCoords = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,7 +119,6 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
     }
   };
 
-  // Dew point spread safety calculation
   const dewSpreadC = skyConditions
     ? Math.round((skyConditions.tempC - skyConditions.dewPointC) * 10) / 10
     : null;
@@ -130,12 +131,10 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
       ? 'Moderate Condensation Risk'
       : 'Dry Optics Safe';
 
-  // SVG Lunar Phase Mask Math
   const lunarPath = useMemo(() => {
     const r = 34;
     const cx = 44;
     const cy = 44;
-    // phaseFraction: 0 = new, 0.25 = first quarter, 0.5 = full, 0.75 = last quarter
     const angle = lunar.phaseFraction * 2 * Math.PI;
     const rx = Math.abs(Math.cos(angle)) * r;
     const waxing = lunar.isWaxing;
@@ -152,10 +151,41 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
   }, [lunar]);
 
   return (
-    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 py-6 pb-24 md:pb-10">
+    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 py-4 sm:py-6 pb-24 md:pb-10">
+      {/* Mobile Immediate Readout Summary (eliminates scrolling past parameters on phone) */}
+      <div className="lg:hidden mb-4 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-3">
+          <div className="text-[10px] font-mono uppercase text-[var(--text-muted)]">NPF Max</div>
+          <div className="text-2xl font-mono font-bold text-[var(--accent-primary)] tabular-nums">
+            {npfResult.npfSeconds.toFixed(1)}
+            <span className="text-xs text-[var(--text-muted)] ml-1">s</span>
+          </div>
+        </div>
+        <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-3">
+          <div className="text-[10px] font-mono uppercase text-[var(--text-muted)]">Target ISO</div>
+          <div className="text-2xl font-mono font-bold text-[var(--accent-secondary)] tabular-nums">
+            {npfResult.suggestedIso}
+          </div>
+        </div>
+        <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-3">
+          <div className="text-[10px] font-mono uppercase text-[var(--text-muted)]">500-Rule</div>
+          <div className="text-2xl font-mono font-bold text-[var(--text-primary)] tabular-nums">
+            {npfResult.rule500Seconds.toFixed(1)}
+            <span className="text-xs text-[var(--text-muted)] ml-1">s</span>
+          </div>
+        </div>
+        <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-3">
+          <div className="text-[10px] font-mono uppercase text-[var(--text-muted)]">Sky SQM</div>
+          <div className="text-2xl font-mono font-bold text-[var(--text-primary)] tabular-nums">
+            {bortleInfo.sqmMid.toFixed(1)}
+            <span className="text-[10px] text-[var(--text-muted)] ml-1">B{bortleClass}</span>
+          </div>
+        </div>
+      </div>
+
       <div className="flex flex-col lg:flex-row gap-6 items-start">
-        {/* Left Control & Parameter Column (340-380px) */}
-        <aside className="w-full lg:w-[360px] shrink-0 space-y-5 border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-5">
+        {/* Left Control & Parameter Column (360px desktop, full width mobile) */}
+        <aside className="w-full lg:w-[360px] shrink-0 space-y-5 border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-4 sm:p-5">
           <div>
             <h1 className="font-display text-lg font-semibold text-[var(--text-primary)]">
               S24 Ultra Exposure Console
@@ -170,7 +200,7 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
             <label className="block text-xs font-medium text-[var(--text-secondary)]">
               Galaxy S24 Ultra Optic & Binning
             </label>
-            <div className="grid grid-cols-1 gap-1.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-1.5">
               {S24_ULTRA_OPTICS.map((lens) => {
                 const selected = lens.id === activeLens.id;
                 return (
@@ -178,7 +208,7 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
                     key={lens.id}
                     type="button"
                     onClick={() => onSelectLensId(lens.id)}
-                    className={`w-full text-left px-3 py-2.5 rounded border transition-colors cursor-pointer min-h-[44px] flex items-center justify-between gap-2 ${
+                    className={`w-full text-left px-3 py-2.5 rounded border transition-colors cursor-pointer min-h-[46px] flex items-center justify-between gap-2 ${
                       selected
                         ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/12 text-[var(--text-primary)]'
                         : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]'
@@ -187,7 +217,7 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
                     <div className="min-w-0">
                       <div className="text-xs font-semibold truncate">{lens.name}</div>
                       <div className="text-[11px] font-mono text-[var(--text-muted)] truncate">
-                        f/{lens.aperture} · {lens.pixelPitchUm.toFixed(2)} µm · {lens.focalLengthActualMm}mm ({lens.focalLength35EqMm}mm eq.)
+                        f/{lens.aperture} · {lens.pixelPitchUm.toFixed(2)} µm · {lens.focalLength35EqMm}mm eq.
                       </div>
                     </div>
                     <span className="font-mono text-xs font-semibold text-[var(--accent-secondary)] shrink-0">
@@ -202,7 +232,7 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
           {/* Declination & Trailing Tolerance */}
           <div className="space-y-4 pt-3 border-t border-[var(--border-hairline)]">
             <div>
-              <div className="flex items-center justify-between text-xs mb-1.5">
+              <div className="flex items-center justify-between text-xs mb-2">
                 <label htmlFor="declination-range" className="font-medium text-[var(--text-secondary)]">
                   Target Celestial Declination (δ)
                 </label>
@@ -220,8 +250,8 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
                 onChange={(e) => setDeclinationDeg(Number(e.target.value))}
                 className="w-full telemetry-slider"
               />
-              <div className="flex justify-between text-[11px] font-mono text-[var(--text-muted)] mt-1">
-                <span>0° Equator (Orion)</span>
+              <div className="flex justify-between text-[11px] font-mono text-[var(--text-muted)] mt-1.5">
+                <span>0° Equator</span>
                 <span>45° Mid</span>
                 <span>85° Pole</span>
               </div>
@@ -241,7 +271,7 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
                     key={opt.k}
                     type="button"
                     onClick={() => setToleranceK(opt.k)}
-                    className={`min-h-[38px] px-2 py-1 text-xs font-medium rounded transition-colors cursor-pointer whitespace-nowrap ${
+                    className={`min-h-[42px] sm:min-h-[38px] px-1.5 py-1 text-xs font-medium rounded transition-colors cursor-pointer whitespace-nowrap truncate ${
                       toleranceK === opt.k
                         ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-ink)] font-semibold'
                         : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
@@ -258,7 +288,7 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
           <div className="space-y-2.5 pt-3 border-t border-[var(--border-hairline)]">
             <div className="flex items-center justify-between text-xs">
               <label htmlFor="bortle-range" className="font-medium text-[var(--text-secondary)]">
-                Bortle Sky Darkness Class
+                Bortle Sky Darkness
               </label>
               <span className="font-mono font-semibold text-[var(--accent-primary)] tabular-nums">
                 Class {bortleClass} · {bortleInfo.sqmMid.toFixed(1)} SQM
@@ -288,7 +318,7 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
                 type="button"
                 onClick={onLocateGps}
                 disabled={gpsLocating}
-                className="inline-flex items-center gap-1 text-xs text-[var(--accent-secondary)] hover:underline cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-1 min-h-[36px] text-xs text-[var(--accent-secondary)] hover:underline cursor-pointer disabled:opacity-50"
               >
                 <MapPin className="w-3.5 h-3.5" />
                 <span>{gpsLocating ? 'Locking...' : 'Use Device GPS'}</span>
@@ -298,29 +328,31 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
             <form onSubmit={handleApplyCoords} className="grid grid-cols-2 gap-2">
               <input
                 type="text"
+                inputMode="decimal"
                 aria-label="Latitude"
                 value={manualLatInput}
                 onChange={(e) => setManualLatInput(e.target.value)}
                 placeholder="Latitude"
-                className="px-2.5 py-2 text-xs font-mono rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] focus:border-[var(--accent-secondary)] outline-none"
+                className="min-h-[42px] px-2.5 py-2 text-xs font-mono rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] focus:border-[var(--accent-secondary)] outline-none"
               />
               <input
                 type="text"
+                inputMode="decimal"
                 aria-label="Longitude"
                 value={manualLngInput}
                 onChange={(e) => setManualLngInput(e.target.value)}
                 placeholder="Longitude"
-                className="px-2.5 py-2 text-xs font-mono rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] focus:border-[var(--accent-secondary)] outline-none"
+                className="min-h-[42px] px-2.5 py-2 text-xs font-mono rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-[var(--text-primary)] focus:border-[var(--accent-secondary)] outline-none"
               />
               <button
                 type="submit"
-                className="col-span-2 min-h-[38px] px-3 py-1.5 text-xs font-medium rounded border border-[var(--border-strong)] bg-[var(--bg-elevated)] text-[var(--text-primary)] hover:border-[var(--accent-secondary)] transition-colors cursor-pointer"
+                className="col-span-2 min-h-[42px] px-3 py-1.5 text-xs font-medium rounded border border-[var(--border-strong)] bg-[var(--bg-elevated)] text-[var(--text-primary)] hover:border-[var(--accent-secondary)] transition-colors cursor-pointer"
               >
                 Update Sky Coordinates
               </button>
             </form>
 
-            <div className="grid grid-cols-2 gap-1.5 pt-1">
+            <div className="grid grid-cols-2 gap-2 pt-1">
               {SITE_PRESETS.map((site) => (
                 <button
                   key={site.label}
@@ -331,7 +363,7 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
                     onUpdateManualGps(site.lat, site.lng, site.label);
                     onChangeBortle(site.bortle);
                   }}
-                  className="text-left px-2.5 py-1.5 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] hover:border-[var(--border-strong)] text-[11px] text-[var(--text-secondary)] truncate cursor-pointer"
+                  className="min-h-[44px] text-left px-2.5 py-2 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] hover:border-[var(--border-strong)] text-[11px] text-[var(--text-secondary)] truncate cursor-pointer"
                 >
                   {site.label}
                 </button>
@@ -350,7 +382,7 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
                 notes: `NPF calculation (${activeLens.name}, δ=${declinationDeg}°, k=${toleranceK}). ${npfResult.evNote}.`,
               })
             }
-            className="w-full min-h-[44px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded bg-[var(--accent-primary)] text-[var(--accent-primary-ink)] text-xs font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer"
+            className="w-full min-h-[46px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded bg-[var(--accent-primary)] text-[var(--accent-primary-ink)] text-xs font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer"
           >
             <Send className="w-3.5 h-3.5" />
             <span>Apply Exposure Recipe to Field Log</span>
@@ -358,9 +390,9 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
         </aside>
 
         {/* Main Viewport Stage */}
-        <section className="flex-1 min-w-0 w-full space-y-6">
-          {/* Primary KPI Telemetry Row */}
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <section className="flex-1 min-w-0 w-full space-y-5 sm:space-y-6">
+          {/* Desktop Primary KPI Telemetry Row (hidden on <lg because mobile summary sits at top) */}
+          <div className="hidden lg:grid grid-cols-4 gap-4">
             <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-4">
               <div className="text-[11px] font-mono uppercase tracking-wider text-[var(--text-muted)]">
                 NPF Max Shutter
@@ -424,15 +456,15 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
             </div>
           </div>
 
-          {/* Dual-Curve NPF vs 500-Rule Calibration SVG Chart */}
-          <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-5">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+          {/* Dual-Curve NPF vs 500-Rule Calibration Chart */}
+          <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-4 sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <div>
                 <h2 className="font-display text-base font-semibold text-[var(--text-primary)]">
                   NPF Pinpoint Limit vs. 500-Rule Across S24 Ultra Optics
                 </h2>
                 <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                  Hover or tap any optical sensor column to inspect shutter divergence at δ={declinationDeg}° and k={toleranceK}.
+                  Tap any optical sensor to calibrate at δ={declinationDeg}° and k={toleranceK}.
                 </p>
               </div>
               <div className="flex items-center gap-4 text-xs font-mono">
@@ -447,15 +479,58 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
               </div>
             </div>
 
-            {/* Interactive SVG Chart */}
-            <div className="w-full overflow-x-auto">
+            {/* Mobile Vertical Dual-Bar Comparison (Zero Horizontal Scroll) */}
+            <div className="sm:hidden space-y-2.5">
+              {chartData.map((d) => {
+                const isSelected = d.lens.id === activeLens.id;
+                const npfPct = Math.min(100, (d.npf / maxChartSec) * 100);
+                const r500Pct = Math.min(100, (d.rule500 / maxChartSec) * 100);
+                return (
+                  <button
+                    key={d.lens.id}
+                    type="button"
+                    onClick={() => onSelectLensId(d.lens.id)}
+                    className={`w-full text-left p-3 rounded border transition-colors cursor-pointer space-y-2 ${
+                      isSelected
+                        ? 'border-[var(--accent-primary)] bg-[var(--bg-canvas)]'
+                        : 'border-[var(--border-hairline)] bg-[var(--bg-canvas)]/60'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2 text-xs font-mono">
+                      <span className="font-semibold text-[var(--text-primary)] truncate">
+                        {d.lens.zoomLabel} · {d.lens.resolutionMp}MP ({d.lens.pixelPitchUm.toFixed(2)}µm)
+                      </span>
+                      <span className="text-[var(--accent-secondary)] shrink-0 tabular-nums">
+                        {d.npf.toFixed(1)}s / {d.rule500.toFixed(1)}s
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="h-1.5 w-full rounded bg-[var(--border-hairline)] overflow-hidden">
+                        <div
+                          className="h-full bg-[var(--accent-secondary)]"
+                          style={{ width: `${npfPct}%` }}
+                        />
+                      </div>
+                      <div className="h-1 w-full rounded bg-[var(--border-hairline)] overflow-hidden">
+                        <div
+                          className="h-full bg-[var(--accent-primary)] opacity-80"
+                          style={{ width: `${r500Pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Tablet / Desktop Interactive SVG Chart */}
+            <div className="hidden sm:block w-full">
               <svg
                 viewBox="0 0 760 250"
-                className="w-full min-w-[560px] h-auto select-none cursor-crosshair"
+                className="w-full h-auto select-none cursor-crosshair"
                 role="img"
                 aria-label="NPF vs 500-Rule shutter limit comparison across Galaxy S24 Ultra sensors"
               >
-                {/* Horizontal grid lines */}
                 {[0, 0.25, 0.5, 0.75, 1].map((frac) => {
                   const y = 200 - frac * 170;
                   const val = Math.round(frac * maxChartSec);
@@ -483,7 +558,6 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
                   );
                 })}
 
-                {/* 500-Rule Dashed Path */}
                 <polyline
                   fill="none"
                   stroke="var(--accent-primary)"
@@ -498,7 +572,6 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
                     .join(' ')}
                 />
 
-                {/* NPF Solid Path */}
                 <polyline
                   fill="none"
                   stroke="var(--accent-secondary)"
@@ -512,7 +585,6 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
                     .join(' ')}
                 />
 
-                {/* Data Vertices & Interactive Columns */}
                 {chartData.map((d, idx) => {
                   const x = 96 + idx * 98;
                   const yNpf = 200 - (Math.min(d.npf, maxChartSec) / maxChartSec) * 170;
@@ -579,40 +651,39 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
                   );
                 })}
               </svg>
-            </div>
 
-            {/* Compact Crosshair Readout Bar */}
-            <div className="mt-3 pt-3 border-t border-[var(--border-hairline)] flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
-              <span className="text-[var(--text-primary)] font-semibold">
-                {hoveredPoint.lens.name}
-              </span>
-              <div className="flex flex-wrap items-center gap-4 text-[var(--text-secondary)]">
-                <span>NPF: {hoveredPoint.npf.toFixed(1)}s</span>
-                <span aria-hidden="true">·</span>
-                <span>500-Rule: {hoveredPoint.rule500.toFixed(1)}s</span>
-                <span aria-hidden="true">·</span>
-                <span>Pitch: {hoveredPoint.lens.pixelPitchUm.toFixed(2)} µm</span>
+              <div className="mt-3 pt-3 border-t border-[var(--border-hairline)] flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+                <span className="text-[var(--text-primary)] font-semibold">
+                  {hoveredPoint.lens.name}
+                </span>
+                <div className="flex flex-wrap items-center gap-4 text-[var(--text-secondary)]">
+                  <span>NPF: {hoveredPoint.npf.toFixed(1)}s</span>
+                  <span aria-hidden="true">·</span>
+                  <span>500-Rule: {hoveredPoint.rule500.toFixed(1)}s</span>
+                  <span aria-hidden="true">·</span>
+                  <span>Pitch: {hoveredPoint.lens.pixelPitchUm.toFixed(2)} µm</span>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Lunar Telemetry + Twilight + Live Cloud/Dew Conditions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
             {/* Lunar Phase & Twilight Card */}
-            <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-5 space-y-4">
-              <div className="flex items-center justify-between">
+            <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-4 sm:p-5 space-y-4">
+              <div className="flex items-center justify-between gap-2">
                 <h2 className="font-display text-base font-semibold text-[var(--text-primary)]">
                   Lunar & Astronomical Dark Window
                 </h2>
-                <span className="text-xs font-mono text-[var(--text-muted)]">
+                <span className="text-xs font-mono text-[var(--text-muted)] shrink-0">
                   UTC Ephemeris
                 </span>
               </div>
 
-              <div className="flex items-center gap-5">
+              <div className="flex items-center gap-4 sm:gap-5">
                 <svg
-                  width="88"
-                  height="88"
+                  width="80"
+                  height="80"
                   viewBox="0 0 88 88"
                   className="shrink-0"
                   role="img"
@@ -643,10 +714,10 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-[var(--border-hairline)] grid grid-cols-2 gap-3 text-xs">
+              <div className="pt-3 border-t border-[var(--border-hairline)] grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div>
                   <div className="text-[var(--text-muted)] flex items-center gap-1">
-                    <Sun className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
+                    <Sun className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
                     <span>Civil / Nautical Dusk</span>
                   </div>
                   <div className="font-mono text-[var(--text-primary)] mt-1 tabular-nums">
@@ -663,13 +734,13 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
             </div>
 
             {/* Live Open-Meteo Sky Conditions Card */}
-            <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-5 space-y-4">
+            <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg p-4 sm:p-5 space-y-4">
               <div className="flex items-center justify-between gap-2">
-                <div>
+                <div className="min-w-0">
                   <h2 className="font-display text-base font-semibold text-[var(--text-primary)]">
                     Local Sky & Lens Dew Telemetry
                   </h2>
-                  <p className="text-[11px] font-mono text-[var(--text-muted)] mt-0.5">
+                  <p className="text-[11px] font-mono text-[var(--text-muted)] mt-0.5 truncate">
                     {skyConditions
                       ? skyConditions.isCachedFallback
                         ? `Cached Snapshot · ${new Date(skyConditions.fetchedAt).toLocaleTimeString()}`
@@ -681,7 +752,7 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
                   type="button"
                   onClick={onRefreshSky}
                   disabled={skyLoading}
-                  className="min-h-[38px] px-3 py-1.5 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-xs font-medium text-[var(--text-secondary)] hover:border-[var(--border-strong)] inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="min-h-[40px] px-3 py-1.5 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] text-xs font-medium text-[var(--text-secondary)] hover:border-[var(--border-strong)] inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${skyLoading ? 'animate-spin' : ''}`} />
                   <span>Refresh</span>
@@ -690,54 +761,75 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
 
               {skyConditions ? (
                 <>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="p-3 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)]">
-                      <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1">
-                        <Cloud className="w-3.5 h-3.5 text-[var(--accent-secondary)]" />
-                        <span>Total Cloud</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+                    <div className="p-3 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] flex sm:block items-center justify-between gap-2">
+                      <div>
+                        <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1">
+                          <Cloud className="w-3.5 h-3.5 text-[var(--accent-secondary)] shrink-0" />
+                          <span>Total Cloud</span>
+                        </div>
+                        <div className="text-[10px] font-mono text-[var(--text-muted)] sm:hidden mt-0.5">
+                          L:{skyConditions.lowCloudPct}% · M:{skyConditions.midCloudPct}% · H:{skyConditions.highCloudPct}%
+                        </div>
                       </div>
-                      <div className="text-xl font-mono font-bold text-[var(--text-primary)] mt-1 tabular-nums">
-                        {skyConditions.cloudCoverPct}%
-                      </div>
-                      <div className="text-[10px] font-mono text-[var(--text-muted)] mt-0.5">
-                        L:{skyConditions.lowCloudPct}% M:{skyConditions.midCloudPct}% H:{skyConditions.highCloudPct}%
-                      </div>
-                    </div>
-
-                    <div className="p-3 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)]">
-                      <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1">
-                        <Droplets className="w-3.5 h-3.5 text-[var(--accent-primary)]" />
-                        <span>Dew Spread</span>
-                      </div>
-                      <div className="text-xl font-mono font-bold text-[var(--text-primary)] mt-1 tabular-nums">
-                        {dewSpreadC !== null ? `${dewSpreadC}°C` : '—'}
-                      </div>
-                      <div className="text-[10px] font-mono text-[var(--text-muted)] mt-0.5">
-                        {skyConditions.tempC}°C / DP {skyConditions.dewPointC}°C
+                      <div className="text-right sm:text-left">
+                        <div className="text-xl font-mono font-bold text-[var(--text-primary)] sm:mt-1 tabular-nums">
+                          {skyConditions.cloudCoverPct}%
+                        </div>
+                        <div className="hidden sm:block text-[10px] font-mono text-[var(--text-muted)] mt-0.5">
+                          L:{skyConditions.lowCloudPct}% M:{skyConditions.midCloudPct}% H:{skyConditions.highCloudPct}%
+                        </div>
                       </div>
                     </div>
 
-                    <div className="p-3 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)]">
-                      <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1">
-                        <Wind className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
-                        <span>Wind / Vis</span>
+                    <div className="p-3 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] flex sm:block items-center justify-between gap-2">
+                      <div>
+                        <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1">
+                          <Droplets className="w-3.5 h-3.5 text-[var(--accent-primary)] shrink-0" />
+                          <span>Dew Spread</span>
+                        </div>
+                        <div className="text-[10px] font-mono text-[var(--text-muted)] sm:hidden mt-0.5">
+                          Temp {skyConditions.tempC}°C / DP {skyConditions.dewPointC}°C
+                        </div>
                       </div>
-                      <div className="text-xl font-mono font-bold text-[var(--text-primary)] mt-1 tabular-nums">
-                        {skyConditions.windKmh}
-                        <span className="text-[11px] text-[var(--text-muted)] ml-1">km/h</span>
+                      <div className="text-right sm:text-left">
+                        <div className="text-xl font-mono font-bold text-[var(--text-primary)] sm:mt-1 tabular-nums">
+                          {dewSpreadC !== null ? `${dewSpreadC}°C` : '—'}
+                        </div>
+                        <div className="hidden sm:block text-[10px] font-mono text-[var(--text-muted)] mt-0.5">
+                          {skyConditions.tempC}°C / DP {skyConditions.dewPointC}°C
+                        </div>
                       </div>
-                      <div className="text-[10px] font-mono text-[var(--text-muted)] mt-0.5">
-                        Vis {skyConditions.visibilityKm} km · {skyConditions.humidityPct}% RH
+                    </div>
+
+                    <div className="p-3 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)] flex sm:block items-center justify-between gap-2">
+                      <div>
+                        <div className="text-[11px] text-[var(--text-muted)] flex items-center gap-1">
+                          <Wind className="w-3.5 h-3.5 text-[var(--text-secondary)] shrink-0" />
+                          <span>Wind / Vis</span>
+                        </div>
+                        <div className="text-[10px] font-mono text-[var(--text-muted)] sm:hidden mt-0.5">
+                          Vis {skyConditions.visibilityKm} km · {skyConditions.humidityPct}% RH
+                        </div>
+                      </div>
+                      <div className="text-right sm:text-left">
+                        <div className="text-xl font-mono font-bold text-[var(--text-primary)] sm:mt-1 tabular-nums">
+                          {skyConditions.windKmh}
+                          <span className="text-[11px] text-[var(--text-muted)] ml-1">km/h</span>
+                        </div>
+                        <div className="hidden sm:block text-[10px] font-mono text-[var(--text-muted)] mt-0.5">
+                          Vis {skyConditions.visibilityKm} km · {skyConditions.humidityPct}% RH
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {dewRisk && (
-                    <div className="flex items-center gap-2 text-xs pt-1 text-[var(--text-secondary)]">
+                    <div className="flex items-start sm:items-center gap-2 text-xs pt-1 text-[var(--text-secondary)]">
                       {dewSpreadC !== null && dewSpreadC <= 2.5 ? (
-                        <AlertTriangle className="w-4 h-4 text-[var(--status-warning)] shrink-0" />
+                        <AlertTriangle className="w-4 h-4 text-[var(--status-warning)] shrink-0 mt-0.5 sm:mt-0" />
                       ) : (
-                        <CheckCircle2 className="w-4 h-4 text-[var(--status-nominal)] shrink-0" />
+                        <CheckCircle2 className="w-4 h-4 text-[var(--status-nominal)] shrink-0 mt-0.5 sm:mt-0" />
                       )}
                       <span>
                         {dewRisk} ·{' '}
