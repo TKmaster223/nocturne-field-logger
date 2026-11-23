@@ -2,8 +2,8 @@
 
 An offline-first **Samsung Galaxy S24 Ultra** astrophotography exposure calculator, celestial event timer, and unedited RAW/JPEG wildlife field logger designed for zero-signal night-sky and field sessions.
 
-**Live App:** [https://ais-pre-wtch3xvkj24bejmz5gezfc-839980037716.europe-west2.run.app](https://ais-pre-wtch3xvkj24bejmz5gezfc-839980037716.europe-west2.run.app)
-
+**Live App:** [[https://ais-pre-wtch3xvkj24bejmz5gezfc-839980037716.europe-west2.run.app](https://ais-pre-wtch3xvkj24bejmz5gezfc-839980037716.europe-west2.run.app)
+](https://nocturn-live.ai.studio/)
 ---
 
 ## Core Features
