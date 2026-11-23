@@ -6,6 +6,7 @@ interface SkySimulatorCanvasProps {
   lens: OpticalLensProfile;
   npfSeconds: number;
   rule500Seconds: number;
+  selectedExposureSec: number;
   effectiveBortle: number;
   cloudLowPct: number;
   cloudMidPct: number;
@@ -26,6 +27,7 @@ export const SkySimulatorCanvas: React.FC<SkySimulatorCanvasProps> = ({
   lens,
   npfSeconds,
   rule500Seconds,
+  selectedExposureSec,
   effectiveBortle,
   cloudLowPct,
   cloudMidPct,
@@ -34,7 +36,7 @@ export const SkySimulatorCanvas: React.FC<SkySimulatorCanvasProps> = ({
   includeMoonGlow,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [simMode, setSimMode] = useState<'npf' | '500rule'>('npf');
+  const [simMode, setSimMode] = useState<'npf' | 'selected' | '500rule'>('selected');
   const [burstActive, setBurstActive] = useState<boolean>(false);
   const [burstProgress, setBurstProgress] = useState<number>(0);
 
@@ -166,9 +168,15 @@ export const SkySimulatorCanvas: React.FC<SkySimulatorCanvasProps> = ({
           ? 1.35
           : 1.75;
 
-      // Trailing length in px when previewing 500-rule vs NPF
-      const overExposureRatio = Math.max(0, rule500Seconds / Math.max(0.5, npfSeconds) - 1);
-      const baseTrailPx = simMode === '500rule' ? Math.min(18, 2 + overExposureRatio * 9) : 0.6;
+      // Trailing length in px based on active preview shutter vs NPF ceiling
+      const previewSec =
+        simMode === 'npf'
+          ? npfSeconds
+          : simMode === '500rule'
+          ? rule500Seconds
+          : selectedExposureSec;
+      const overExposureRatio = Math.max(0, previewSec / Math.max(0.5, npfSeconds) - 1);
+      const baseTrailPx = overExposureRatio > 0.05 ? Math.min(20, 1.5 + overExposureRatio * 9) : 0.6;
       const trailPx = burstActive ? baseTrailPx * burstProgress : baseTrailPx;
 
       // Star brightness boost during burst
@@ -280,6 +288,7 @@ export const SkySimulatorCanvas: React.FC<SkySimulatorCanvasProps> = ({
     lens,
     npfSeconds,
     rule500Seconds,
+    selectedExposureSec,
     effectiveBortle,
     cloudLowPct,
     cloudMidPct,
@@ -288,6 +297,14 @@ export const SkySimulatorCanvas: React.FC<SkySimulatorCanvasProps> = ({
     burstActive,
     burstProgress,
   ]);
+
+  const activePreviewSec =
+    simMode === 'npf'
+      ? npfSeconds
+      : simMode === '500rule'
+      ? rule500Seconds
+      : selectedExposureSec;
+  const activeRatio = activePreviewSec / Math.max(0.2, npfSeconds);
 
   return (
     <div className="border border-[var(--border-hairline)] bg-[var(--bg-surface)] rounded-lg overflow-hidden">
@@ -303,29 +320,40 @@ export const SkySimulatorCanvas: React.FC<SkySimulatorCanvasProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-          <div className="grid grid-cols-2 p-0.5 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)]">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+          <div className="grid grid-cols-3 p-0.5 rounded border border-[var(--border-hairline)] bg-[var(--bg-canvas)]">
             <button
               type="button"
               onClick={() => setSimMode('npf')}
-              className={`min-h-[34px] px-2.5 text-[11px] font-mono rounded transition-colors cursor-pointer whitespace-nowrap ${
+              className={`min-h-[34px] px-2 text-[11px] font-mono rounded transition-colors cursor-pointer whitespace-nowrap ${
                 simMode === 'npf'
                   ? 'bg-[var(--accent-secondary)] text-[var(--accent-primary-ink)] font-semibold'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`}
             >
-              NPF ({npfSeconds.toFixed(1)}s)
+              NPF {npfSeconds.toFixed(1)}s
+            </button>
+            <button
+              type="button"
+              onClick={() => setSimMode('selected')}
+              className={`min-h-[34px] px-2 text-[11px] font-mono rounded transition-colors cursor-pointer whitespace-nowrap ${
+                simMode === 'selected'
+                  ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-ink)] font-semibold'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              Sel {selectedExposureSec.toFixed(1)}s
             </button>
             <button
               type="button"
               onClick={() => setSimMode('500rule')}
-              className={`min-h-[34px] px-2.5 text-[11px] font-mono rounded transition-colors cursor-pointer whitespace-nowrap ${
+              className={`min-h-[34px] px-2 text-[11px] font-mono rounded transition-colors cursor-pointer whitespace-nowrap ${
                 simMode === '500rule'
                   ? 'bg-[var(--accent-primary)] text-[var(--accent-primary-ink)] font-semibold'
                   : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`}
             >
-              500-Rule ({rule500Seconds.toFixed(1)}s)
+              500R {rule500Seconds.toFixed(1)}s
             </button>
           </div>
 
@@ -349,15 +377,15 @@ export const SkySimulatorCanvas: React.FC<SkySimulatorCanvasProps> = ({
         <canvas ref={canvasRef} className="w-full h-full block" />
 
         {/* Subtle Exposure Status Readout inside Viewfinder */}
-        <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between text-[11px] font-mono pointer-events-none">
-          <span className="px-2 py-0.5 rounded bg-[var(--bg-canvas)]/75 border border-[var(--border-hairline)] text-[var(--text-primary)]">
-            {simMode === 'npf'
+        <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between gap-2 text-[11px] font-mono pointer-events-none">
+          <span className="px-2 py-0.5 rounded bg-[var(--bg-canvas)]/75 border border-[var(--border-hairline)] text-[var(--text-primary)] truncate">
+            {activeRatio <= 1.05
               ? 'Pinpoint Stars · Zero Trail'
-              : rule500Seconds > npfSeconds * 1.15
-              ? 'Warning: Elliptical Star Trails Visible'
-              : 'Minimal Trailing at Current Optic'}
+              : activeRatio <= 1.45
+              ? 'Caution · Marginal Star Elongation'
+              : 'Warning · Star Trails Visible'}
           </span>
-          <span className="px-2 py-0.5 rounded bg-[var(--bg-canvas)]/75 border border-[var(--border-hairline)] text-[var(--text-secondary)] tabular-nums">
+          <span className="px-2 py-0.5 rounded bg-[var(--bg-canvas)]/75 border border-[var(--border-hairline)] text-[var(--text-secondary)] tabular-nums shrink-0">
             Clouds: L {cloudLowPct}% · M {cloudMidPct}% · H {cloudHighPct}%
           </span>
         </div>

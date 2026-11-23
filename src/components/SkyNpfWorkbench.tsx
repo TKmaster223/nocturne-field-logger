@@ -26,6 +26,7 @@ import {
   getBortleInfo,
 } from '../utils/astroMath';
 import { SkySimulatorCanvas } from './SkySimulatorCanvas';
+import { TrailRiskGauge } from './TrailRiskGauge';
 
 interface SkyNpfWorkbenchProps {
   selectedLensId: string;
@@ -67,6 +68,7 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
 }) => {
   const [declinationDeg, setDeclinationDeg] = useState<number>(15);
   const [toleranceK, setToleranceK] = useState<number>(1);
+  const [selectedExposureSec, setSelectedExposureSec] = useState<number>(10);
   const [includeMoonGlow, setIncludeMoonGlow] = useState<boolean>(true);
   const [hoveredOpticId, setHoveredOpticId] = useState<string | null>(null);
   const [manualLatInput, setManualLatInput] = useState<string>(gps.lat.toFixed(4));
@@ -425,10 +427,10 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
             onClick={() =>
               onApplyToFieldLog({
                 lensId: activeLens.id,
-                shutterSec: npfResult.npfSeconds,
+                shutterSec: selectedExposureSec,
                 iso: npfResult.suggestedIso,
                 bortle: Math.round(effectiveSky.effectiveBortle),
-                notes: `NPF calculation (${activeLens.name}, δ=${declinationDeg}°, k=${toleranceK}, Eff. Bortle ${effectiveSky.effectiveBortle.toFixed(1)}). ${npfResult.evNote}.`,
+                notes: `Selected ${selectedExposureSec.toFixed(1)}s vs NPF ${npfResult.npfSeconds.toFixed(1)}s (${activeLens.name}, δ=${declinationDeg}°, k=${toleranceK}, Eff. Bortle ${effectiveSky.effectiveBortle.toFixed(1)}). ${npfResult.evNote}.`,
               })
             }
             className="w-full min-h-[46px] inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded bg-[var(--accent-primary)] text-[var(--accent-primary-ink)] text-xs font-semibold hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer"
@@ -505,11 +507,24 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
             </div>
           </div>
 
+          {/* Visual Star-Trail Risk Gauge */}
+          <TrailRiskGauge
+            lens={activeLens}
+            declinationDeg={declinationDeg}
+            toleranceK={toleranceK}
+            npfSeconds={npfResult.npfSeconds}
+            rule500Seconds={npfResult.rule500Seconds}
+            selectedExposureSec={selectedExposureSec}
+            onChangeExposureSec={setSelectedExposureSec}
+            skyglowCapSec={effectiveSky.skyglowCapSec}
+          />
+
           {/* Interactive Live S24 Ultra Sky & Star-Trail Simulator */}
           <SkySimulatorCanvas
             lens={activeLens}
             npfSeconds={npfResult.npfSeconds}
             rule500Seconds={npfResult.rule500Seconds}
+            selectedExposureSec={selectedExposureSec}
             effectiveBortle={effectiveSky.effectiveBortle}
             cloudLowPct={skyConditions?.lowCloudPct ?? 0}
             cloudMidPct={skyConditions?.midCloudPct ?? 0}
