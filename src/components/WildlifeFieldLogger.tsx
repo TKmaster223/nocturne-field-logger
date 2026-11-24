@@ -10,10 +10,12 @@ import {
   Search,
   Share2,
   ShieldCheck,
+  Smartphone,
   Trash2,
   Upload,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import { CameraCaptureModal } from './CameraCaptureModal';
 import { S24_ULTRA_OPTICS, WILDLIFE_SPECIES_PRESETS } from '../data/s24Optics';
 import {
   CaptureCategory,
@@ -56,6 +58,7 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
   onNotify,
 }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const nativeCameraInputRef = useRef<HTMLInputElement | null>(null);
 
   const [category, setCategory] = useState<CaptureCategory>(CaptureCategory.Wildlife);
   const [speciesTag, setSpeciesTag] = useState<string>('Frog');
@@ -72,6 +75,7 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
   const [parsingFile, setParsingFile] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
   const [dragActive, setDragActive] = useState<boolean>(false);
+  const [cameraModalOpen, setCameraModalOpen] = useState<boolean>(false);
 
   const [filter, setFilter] = useState<LogFilter>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -103,23 +107,41 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
     [selectedLensId]
   );
 
-  const handleFileIngest = async (file: File) => {
+  const handleFileIngest = async (file: File, fromLiveCamera = false) => {
     setParsingFile(true);
     try {
       const result = await parseCameraFileExif(file);
+      let finalExif = result.exif;
+      if (fromLiveCamera && !result.exif.parsedFromFile) {
+        finalExif = {
+          ...result.exif,
+          lensName: activeLens.name,
+          shutterSec,
+          shutterDisplay: formatShutterDisplay(shutterSec),
+          iso,
+          aperture: activeLens.aperture,
+          focalLengthMm: activeLens.focalLengthActualMm,
+          focalLength35Mm: activeLens.focalLength35EqMm,
+          resolutionMode: 'Phone Camera Capture',
+        };
+      }
       setPendingFile(file);
-      setParsedExif(result.exif);
+      setParsedExif(finalExif);
       setParsedGps(result.gps);
       setPreviewUrl(result.previewDataUrl);
-      setShutterSec(result.exif.shutterSec);
-      setIso(result.exif.iso);
-      if (result.exif.shutterSec >= 1) {
-        setCategory(CaptureCategory.Astro);
-        if (speciesTag === 'Frog') setSpeciesTag('Night Sky');
+      if (result.exif.parsedFromFile) {
+        setShutterSec(result.exif.shutterSec);
+        setIso(result.exif.iso);
+        if (result.exif.shutterSec >= 1) {
+          setCategory(CaptureCategory.Astro);
+          if (speciesTag === 'Frog') setSpeciesTag('Night Sky');
+        }
       }
       onNotify(
         result.exif.parsedFromFile
           ? `Decoded EXIF from ${file.name} (${result.exif.shutterDisplay}, ISO ${result.exif.iso})`
+          : fromLiveCamera
+          ? `Captured ${file.name} (${formatFileSize(file.size)}) — ready to tag and save.`
           : `Attached ${file.name}; no embedded EXIF found, manual fields ready.`
       );
     } catch {
@@ -272,28 +294,33 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
           ? crypto.randomUUID()
           : `log-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-      const finalExif: ExifMetadata = parsedExif ?? {
-        cameraMake: 'Samsung',
-        cameraModel: 'SM-S928B (Galaxy S24 Ultra)',
-        lensName: activeLens.name,
-        shutterSec,
-        shutterDisplay: formatShutterDisplay(shutterSec),
-        iso,
-        aperture: activeLens.aperture,
-        focalLengthMm: activeLens.focalLengthActualMm,
-        focalLength35Mm: activeLens.focalLength35EqMm,
-        resolutionMode: `${activeLens.resolutionMp} MP ${
-          category === CaptureCategory.Astro ? 'Expert RAW' : 'Manual Log'
-        }`,
-        whiteBalance: 'Native Daylight / Manual',
-        capturedAt: new Date().toISOString(),
-        fileName: `${cleanSpecies.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}.dng`,
-        fileSizeBytes: 0,
-        mimeType: 'image/x-adobe-dng',
-        isRawDng: true,
-        isUneditedOriginal: true,
-        parsedFromFile: false,
-      };
+      const finalExif: ExifMetadata =
+        parsedExif && parsedExif.parsedFromFile
+          ? parsedExif
+          : {
+              ...(parsedExif ?? {
+                cameraMake: 'Samsung',
+                cameraModel: 'SM-S928B (Galaxy S24 Ultra)',
+                resolutionMode: `${activeLens.resolutionMp} MP ${
+                  category === CaptureCategory.Astro ? 'Expert RAW' : 'Manual Log'
+                }`,
+                whiteBalance: 'Native Daylight / Manual',
+                capturedAt: new Date().toISOString(),
+                fileName: `${cleanSpecies.toLowerCase().replace(/\s+/g, '_')}_${Date.now()}.dng`,
+                fileSizeBytes: 0,
+                mimeType: 'image/x-adobe-dng',
+                isRawDng: true,
+                isUneditedOriginal: true,
+                parsedFromFile: false,
+              }),
+              lensName: activeLens.name,
+              shutterSec,
+              shutterDisplay: formatShutterDisplay(shutterSec),
+              iso,
+              aperture: activeLens.aperture,
+              focalLengthMm: activeLens.focalLengthActualMm,
+              focalLength35Mm: activeLens.focalLength35EqMm,
+            };
 
       const entry: FieldCaptureLog = {
         id,
@@ -316,6 +343,7 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
       setPreviewUrl(undefined);
       setNotes('');
       if (fileInputRef.current) fileInputRef.current.value = '';
+      if (nativeCameraInputRef.current) nativeCameraInputRef.current.value = '';
     } finally {
       setSaving(false);
     }
@@ -393,6 +421,39 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
             </p>
           </div>
 
+          {/* Direct Phone Camera Capture Controls */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setCameraModalOpen(true)}
+              className="min-h-[44px] px-3 py-2 rounded border border-[var(--accent-primary)]/70 bg-[var(--accent-primary)]/12 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--accent-primary)]/20 inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap"
+            >
+              <Camera className="w-4 h-4 text-[var(--accent-primary)] shrink-0" />
+              <span className="truncate">Live Camera</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => nativeCameraInputRef.current?.click()}
+              className="min-h-[44px] px-3 py-2 rounded border border-[var(--border-strong)] bg-[var(--bg-canvas)] text-xs font-medium text-[var(--text-primary)] hover:border-[var(--accent-secondary)] inline-flex items-center justify-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap"
+            >
+              <Smartphone className="w-4 h-4 text-[var(--accent-secondary)] shrink-0" />
+              <span className="truncate">Phone Camera App</span>
+            </button>
+
+            <input
+              ref={nativeCameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleFileIngest(file, true);
+              }}
+            />
+          </div>
+
           {/* File Dropzone */}
           <div
             onDragOver={(e) => {
@@ -432,26 +493,53 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
                 Decoding TIFF/IFD & GPS headers...
               </div>
             ) : pendingFile && parsedExif ? (
-              <div className="space-y-1.5 text-left">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-mono font-semibold text-[var(--text-primary)] truncate">
-                    {parsedExif.fileName}
-                  </span>
-                  <span className="text-[11px] font-mono text-[var(--accent-secondary)] shrink-0">
-                    {formatFileSize(parsedExif.fileSizeBytes)}
-                  </span>
-                </div>
-                <div className="text-[11px] font-mono text-[var(--text-muted)]">
-                  {parsedExif.shutterDisplay} · f/{parsedExif.aperture} · ISO {parsedExif.iso} ·{' '}
-                  {parsedExif.focalLength35Mm}mm eq.
-                </div>
-                <div className="text-[11px] font-mono text-[var(--status-nominal)] inline-flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>
-                    {parsedExif.isUneditedOriginal
-                      ? 'Zero-Filter Original Verified'
-                      : 'Modified Software Header'}
-                  </span>
+              <div className="flex items-center gap-3 text-left">
+                {previewUrl && (
+                  <img
+                    src={previewUrl}
+                    alt="Pending capture preview"
+                    referrerPolicy="no-referrer"
+                    className="w-14 h-14 rounded border border-[var(--border-hairline)] object-cover shrink-0"
+                  />
+                )}
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-mono font-semibold text-[var(--text-primary)] truncate">
+                      {parsedExif.fileName}
+                    </span>
+                    <span className="text-[11px] font-mono text-[var(--accent-secondary)] shrink-0">
+                      {formatFileSize(parsedExif.fileSizeBytes)}
+                    </span>
+                  </div>
+                  <div className="text-[11px] font-mono text-[var(--text-muted)] truncate">
+                    {parsedExif.shutterDisplay} · f/{parsedExif.aperture} · ISO {parsedExif.iso} ·{' '}
+                    {parsedExif.focalLength35Mm}mm eq.
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-mono text-[var(--status-nominal)] inline-flex items-center gap-1 truncate">
+                      <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">
+                        {parsedExif.isUneditedOriginal
+                          ? 'Zero-Filter Original'
+                          : 'Modified Software Header'}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPendingFile(null);
+                        setParsedExif(null);
+                        setParsedGps(null);
+                        setPreviewUrl(undefined);
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                        if (nativeCameraInputRef.current) nativeCameraInputRef.current.value = '';
+                      }}
+                      className="text-[11px] font-mono text-[var(--text-muted)] hover:text-[var(--status-critical)] shrink-0 cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -561,7 +649,7 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
             </div>
 
             {/* Manual EXIF / Optic Overrides */}
-            {!parsedExif && (
+            {(!parsedExif || !parsedExif.parsedFromFile) && (
               <div className="space-y-3 pt-2 border-t border-[var(--border-hairline)]">
                 <div>
                   <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
@@ -938,6 +1026,13 @@ export const WildlifeFieldLogger: React.FC<WildlifeFieldLoggerProps> = ({
           )}
         </section>
       </div>
+
+      <CameraCaptureModal
+        isOpen={cameraModalOpen}
+        onClose={() => setCameraModalOpen(false)}
+        onCaptureFile={(file) => handleFileIngest(file, true)}
+        onTriggerNativeCamera={() => nativeCameraInputRef.current?.click()}
+      />
     </div>
   );
 };

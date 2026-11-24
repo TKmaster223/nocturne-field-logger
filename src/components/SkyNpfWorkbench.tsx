@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Cloud,
   Droplets,
@@ -42,6 +42,7 @@ interface SkyNpfWorkbenchProps {
   skyError: string | null;
   onRefreshSky: () => void;
   onApplyToFieldLog: (draft: PrefilledAstroDraft) => void;
+  onOpenLightMap: () => void;
 }
 
 const SITE_PRESETS: Array<{ label: string; lat: number; lng: number; bortle: number }> = [
@@ -65,6 +66,7 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
   skyError,
   onRefreshSky,
   onApplyToFieldLog,
+  onOpenLightMap,
 }) => {
   const [declinationDeg, setDeclinationDeg] = useState<number>(15);
   const [toleranceK, setToleranceK] = useState<number>(1);
@@ -73,6 +75,11 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
   const [hoveredOpticId, setHoveredOpticId] = useState<string | null>(null);
   const [manualLatInput, setManualLatInput] = useState<string>(gps.lat.toFixed(4));
   const [manualLngInput, setManualLngInput] = useState<string>(gps.lng.toFixed(4));
+
+  useEffect(() => {
+    setManualLatInput(gps.lat.toFixed(4));
+    setManualLngInput(gps.lng.toFixed(4));
+  }, [gps.lat, gps.lng]);
 
   const activeLens: OpticalLensProfile = useMemo(
     () => S24_ULTRA_OPTICS.find((o) => o.id === selectedLensId) ?? S24_ULTRA_OPTICS[1],
@@ -420,6 +427,15 @@ export const SkyNpfWorkbench: React.FC<SkyNpfWorkbenchProps> = ({
                 </button>
               ))}
             </div>
+
+            <button
+              type="button"
+              onClick={onOpenLightMap}
+              className="w-full min-h-[42px] px-3 py-2 rounded border border-[var(--accent-secondary)]/50 bg-[var(--accent-secondary)]/10 text-xs font-medium text-[var(--accent-secondary)] hover:bg-[var(--accent-secondary)]/15 inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              <span>Open Light Pollution Map</span>
+            </button>
           </div>
 
           <button

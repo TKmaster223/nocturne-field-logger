@@ -1,5 +1,5 @@
 import React from 'react';
-import { Compass, Eye, Moon, Plus, Radio, Timer, Camera, SlidersHorizontal } from 'lucide-react';
+import { Compass, Eye, MapPin, Moon, Plus, Radio, Timer, Camera, SlidersHorizontal } from 'lucide-react';
 import { GpsCoordinates, WorkbenchTab } from '../types/field';
 
 interface TopBarProps {
@@ -17,6 +17,7 @@ interface TopBarProps {
 
 const NAV_ITEMS: Array<{ id: WorkbenchTab; label: string; mobileLabel: string }> = [
   { id: WorkbenchTab.SkyNpf, label: 'Sky & NPF', mobileLabel: 'Sky/NPF' },
+  { id: WorkbenchTab.LightMap, label: 'Sky Map', mobileLabel: 'LP Map' },
   { id: WorkbenchTab.Timers, label: 'Timers', mobileLabel: 'Timers' },
   { id: WorkbenchTab.FieldLog, label: 'Field Log', mobileLabel: 'Logbook' },
   { id: WorkbenchTab.Optics, label: 'S24 Optics', mobileLabel: 'Optics' },
@@ -38,6 +39,8 @@ export const TopBar: React.FC<TopBarProps> = ({
     switch (id) {
       case WorkbenchTab.SkyNpf:
         return <Moon className="w-5 h-5" />;
+      case WorkbenchTab.LightMap:
+        return <MapPin className="w-5 h-5" />;
       case WorkbenchTab.Timers:
         return <Timer className="w-5 h-5" />;
       case WorkbenchTab.FieldLog:
@@ -173,7 +176,7 @@ export const TopBar: React.FC<TopBarProps> = ({
       {/* Mobile Bottom Navigation Bar (<= 15% combined viewport height, >= 44px touch targets) */}
       <nav
         aria-label="Mobile navigation"
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--border-hairline)] bg-[var(--bg-canvas)]/95 backdrop-blur-md grid grid-cols-4 pb-[env(safe-area-inset-bottom)]"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--border-hairline)] bg-[var(--bg-canvas)]/95 backdrop-blur-md grid grid-cols-5 pb-[env(safe-area-inset-bottom)]"
       >
         {NAV_ITEMS.map((item) => {
           const isActive = activeTab === item.id;

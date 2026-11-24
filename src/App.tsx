@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { TopBar } from './components/TopBar';
 import { SkyNpfWorkbench } from './components/SkyNpfWorkbench';
+import { LightPollutionMapView } from './components/LightPollutionMapView';
 import { CelestialTimersView } from './components/CelestialTimersView';
 import { WildlifeFieldLogger } from './components/WildlifeFieldLogger';
 import { OpticsReferenceView } from './components/OpticsReferenceView';
@@ -64,6 +65,7 @@ export default function App() {
   const [logs, setLogs] = useState<FieldCaptureLog[]>([]);
   const [prefilledDraft, setPrefilledDraft] = useState<PrefilledAstroDraft | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [gmpQuotaExceeded, setGmpQuotaExceeded] = useState<boolean>(false);
 
   const notify = useCallback((msg: string) => {
     setToastMsg(msg);
@@ -107,15 +109,18 @@ export default function App() {
     }
   }, [gps]);
 
-  // Online / Offline listeners
+  // Online / Offline listeners + Google Maps quota listener
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
+    const handleQuotaExceeded = () => setGmpQuotaExceeded(true);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    window.addEventListener('gmp-quota-exceeded', handleQuotaExceeded);
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('gmp-quota-exceeded', handleQuotaExceeded);
     };
   }, []);
 
@@ -203,6 +208,23 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--bg-canvas)] text-[var(--text-primary)]">
+      {gmpQuotaExceeded && (
+        <div className="bg-amber-50 border-b border-amber-200 text-amber-900 px-4 py-2.5 text-xs md:text-sm text-center sticky top-0 z-50 shadow-sm">
+          <span>
+            Google Maps Platform quota reached. If you are the app owner, visit{' '}
+            <a
+              href="https://developers.google.com/maps/ai/ai-studio?utm_campaign=gmp_mcp_codeassist_v1_aistudio#quota_exceeded_errors"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline font-semibold text-amber-950 hover:text-amber-800"
+            >
+              maps developer site
+            </a>{' '}
+            for instructions to update your account.
+          </span>
+        </div>
+      )}
+
       <TopBar
         activeTab={activeTab}
         onSelectTab={setActiveTab}
@@ -245,6 +267,24 @@ export default function App() {
                   setPrefilledDraft(draft);
                   setActiveTab(WorkbenchTab.FieldLog);
                 }}
+                onOpenLightMap={() => setActiveTab(WorkbenchTab.LightMap)}
+              />
+            )}
+
+            {activeTab === WorkbenchTab.LightMap && (
+              <LightPollutionMapView
+                gps={gps}
+                bortleClass={bortleClass}
+                selectedLensId={selectedLensId}
+                logs={logs}
+                gpsLocating={gpsLocating}
+                isOnline={isOnline}
+                onLocateGps={handleLocateGps}
+                onUpdateManualGps={(lat, lng, label) =>
+                  setGps({ lat, lng, label: label || 'Custom Site' })
+                }
+                onChangeBortle={setBortleClass}
+                onReturnToNpf={() => setActiveTab(WorkbenchTab.SkyNpf)}
               />
             )}
 

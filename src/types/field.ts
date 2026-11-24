@@ -1,5 +1,6 @@
 export enum WorkbenchTab {
   SkyNpf = 'sky-npf',
+  LightMap = 'light-map',
   Timers = 'timers',
   FieldLog = 'field-log',
   Optics = 'optics',
